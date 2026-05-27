@@ -106,13 +106,11 @@ class RouteRuleService {
       throw new Error(`更新失败，路由规则【${id}】不存在`);
     }
 
-    // 判断是否需要清空目标环境
-    const shouldClearTarget = targetEnvId === "" || targetEnvId === undefined;
-
-    if (shouldClearTarget) {
+    // 判断是否需要清空目标环境（只有明确发送空字符串时才清空）
+    if (targetEnvId === "") {
       // 清空目标环境
       routeRuleItem.targetEnvId = "";
-    } else if (targetEnvId !== existingRule.targetEnvId) {
+    } else if (targetEnvId !== undefined && targetEnvId !== existingRule.targetEnvId) {
       // 更新了目标环境，检查目标环境是否存在
       const targetEnv = this.envRepo.findOneById(targetEnvId);
       if (!targetEnv) {
