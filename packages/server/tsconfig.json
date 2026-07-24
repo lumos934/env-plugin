@@ -16,5 +16,5 @@
     "sourceMap": true,
     "inlineSources": true
   },
-  "include": ["src/**/*", "eslint.config.ts", "./bin/index.ts"]
+  "include": ["src/**/*", "test/**/*", "eslint.config.ts", "vitest.config.ts", "./bin/index.ts"]
 }

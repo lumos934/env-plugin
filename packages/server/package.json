@@ -23,7 +23,13 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch --tsconfig tsconfig.dev.json -- ./bin/index.ts",
     "build": "tsc -p tsconfig.build.json",
-    "lint": "eslint ./src"
+    "lint": "eslint ./src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:ui:coverage": "vitest --ui --coverage",
+    "test:coverage:open": "vitest run --coverage && npx opener coverage/index.html"
   },
   "author": "lumos934",
   "license": "MIT",
@@ -52,10 +58,13 @@
     "@types/set-cookie-parser": "^2.4.10",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/ui": "4.1.10",
     "globals": "^17.3.0",
     "nodemon": "^3.1.9",
     "tsx": "^4.20.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.10"
   },
   "bugs": {
     "url": "https://github.com/lumos934/env-plugin/issues"
