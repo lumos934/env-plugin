@@ -95,10 +95,12 @@ class RouteRuleRepo {
    * @param routeRuleItem - 包含要更新的路由规则ID及字段的对象
    */
   update(routeRuleItem: RouteRuleUpdate) {
+    // 先检查存在性：findAndUpdate 回调仅在匹配文档时执行
+    const existing = this.findOneById(routeRuleItem.id);
+    if (!existing) {
+      throw new Error(`未找到对应的路由规则【${routeRuleItem.id}】`);
+    }
     this.getCollection().findAndUpdate({ id: routeRuleItem.id }, (rule) => {
-      if (!rule) {
-        throw new Error("未找到对应的路由规则");
-      }
       Object.assign(rule, routeRuleItem);
       return rule;
     });

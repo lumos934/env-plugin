@@ -94,10 +94,12 @@ class PasswordRepo {
    * @param passwordItem - 包含要更新的密码ID及字段的对象
    */
   update(passwordItem: PasswordUpdate) {
+    // 先检查存在性：findAndUpdate 回调仅在匹配文档时执行
+    const existing = this.findOneById(passwordItem.id);
+    if (!existing) {
+      throw new Error(`未找到对应的密码【${passwordItem.id}】`);
+    }
     this.getCollection().findAndUpdate({ id: passwordItem.id }, (pwd) => {
-      if (!pwd) {
-        throw new Error("未找到对应的密码");
-      }
       Object.assign(pwd, passwordItem);
       return pwd;
     });

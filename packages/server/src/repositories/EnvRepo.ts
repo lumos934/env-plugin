@@ -131,10 +131,13 @@ class EnvRepo {
    * @throws {Error} 当更新操作出现问题时抛出错误
    */
   update(envmItem: EnvUpdate) {
+    // 先检查存在性：findAndUpdate 回调仅在匹配文档时执行，
+    // 回调内 null 检查是死代码，必须在调用前校验
+    const existing = this.findOneById(envmItem.id);
+    if (!existing) {
+      throw new AppError(`未找到对应的环境【${envmItem.id}】`);
+    }
     this.getCollection().findAndUpdate({ id: envmItem.id }, (env) => {
-      if (!env) {
-        throw new AppError("未找到对应的环境");
-      }
       Object.assign(env, envmItem);
       return env;
     });

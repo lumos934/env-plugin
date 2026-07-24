@@ -134,11 +134,7 @@ class DevServerRepo {
     this.getCollection().findAndUpdate(
       { id: validationResult.data.id },
       (server) => {
-        if (!server) {
-          throw new AppError(
-            `更新开发服务器失败：服务器【${validationResult.data.id}】不存在`
-          );
-        }
+        // 此前已通过 findOneById 确认存在性，回调必定有值
         Object.assign(server, validationResult.data);
         return server;
       }
