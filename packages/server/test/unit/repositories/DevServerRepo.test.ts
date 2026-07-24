@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createMemoryDb, setCurrentDb, getCurrentDb } from '../helpers/db.js'
-import { createDevServerFixture } from '../helpers/fixtures.js'
-import { DevServerRepo } from '../../src/repositories/DevServerRepo.js'
+import { createMemoryDb, setCurrentDb, getCurrentDb } from '../../helpers/db.js'
+import { createDevServerFixture } from '../../helpers/fixtures.js'
+import { DevServerRepo } from '../../../src/repositories/DevServerRepo.js'
 
-vi.mock('../../src/repositories/database.js', () => ({
+vi.mock('../../../src/repositories/database.js', () => ({
   getDatabase: () => getCurrentDb(),
   startDatabase: () => Promise.resolve(getCurrentDb()),
 }))

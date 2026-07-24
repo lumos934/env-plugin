@@ -34,36 +34,10 @@
       "detail": ""
     },
     {
-      "type": "shell",
-      "command": "pnpm",
-      "args": ["--filter", "test-server", "dev"],
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "shared",
-        "group": "dev-group"
-      },
-      "label": "开发 dev test-server",
-      "detail": "node test/server.js"
-    },
-    {
-      "type": "shell",
-      "command": "pnpm",
-      "args": ["--filter", "test-client", "dev"],
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "shared",
-        "group": "dev-group"
-      },
-      "label": "开发 dev test-client",
-      "detail": ""
-    },
-    {
       "label": "开发-parallel",
       "dependsOn": [
         "开发 dev client",
-        "开发 dev env-plugin",
-        "开发 dev test-server",
-        "开发 dev test-client"
+        "开发 dev env-plugin"
       ],
       "dependsOrder": "parallel"
     }

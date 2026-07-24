@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { v4 as uuidv4 } from 'uuid'
-import { createMemoryDb, setCurrentDb, getCurrentDb } from '../helpers/db.js'
-import { createEnvFixture, createEnvCreateFixture } from '../helpers/fixtures.js'
-import { EnvRepo } from '../../src/repositories/EnvRepo.js'
+import { createMemoryDb, setCurrentDb, getCurrentDb } from '../../helpers/db.js'
+import { createEnvFixture, createEnvCreateFixture } from '../../helpers/fixtures.js'
+import { EnvRepo } from '../../../src/repositories/EnvRepo.js'
 
 // Mock getDatabase() 全局单例，指向内存数据库
-vi.mock('../../src/repositories/database.js', () => ({
+vi.mock('../../../src/repositories/database.js', () => ({
   getDatabase: () => getCurrentDb(),
   startDatabase: () => Promise.resolve(getCurrentDb()),
 }))

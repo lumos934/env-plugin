@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { RouteRuleService } from '../../src/service/RouteRuleService.js'
+import { RouteRuleService } from '../../../src/service/RouteRuleService.js'
 import {
   createMockRouteRuleRepo,
   createMockEnvRepo,
-} from '../helpers/mockRepos.js'
+} from '../../helpers/mockRepos.js'
 import {
   createRouteRuleFixture,
   createRouteRuleCreateFixture,
   createEnvFixture,
-} from '../helpers/fixtures.js'
+} from '../../helpers/fixtures.js'
 
 describe('RouteRuleService', () => {
   let service: RouteRuleService

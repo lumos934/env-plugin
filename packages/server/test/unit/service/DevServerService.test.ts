@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { DevServerService } from '../../src/service/DevServerService.js'
+import { DevServerService } from '../../../src/service/DevServerService.js'
 import {
   createMockDevServerRepo,
   createMockEnvRepo,
-} from '../helpers/mockRepos.js'
+} from '../../helpers/mockRepos.js'
 import {
   createDevServerFixture,
   createDevServerCreateFixture,
-} from '../helpers/fixtures.js'
+} from '../../helpers/fixtures.js'
 
 describe('DevServerService', () => {
   let service: DevServerService

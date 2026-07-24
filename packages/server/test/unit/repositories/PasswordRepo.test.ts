@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createMemoryDb, setCurrentDb, getCurrentDb } from '../helpers/db.js'
-import { createPasswordFixture } from '../helpers/fixtures.js'
-import { PasswordRepo } from '../../src/repositories/PasswordRepo.js'
+import { createMemoryDb, setCurrentDb, getCurrentDb } from '../../helpers/db.js'
+import { createPasswordFixture } from '../../helpers/fixtures.js'
+import { PasswordRepo } from '../../../src/repositories/PasswordRepo.js'
 
-vi.mock('../../src/repositories/database.js', () => ({
+vi.mock('../../../src/repositories/database.js', () => ({
   getDatabase: () => getCurrentDb(),
   startDatabase: () => Promise.resolve(getCurrentDb()),
 }))

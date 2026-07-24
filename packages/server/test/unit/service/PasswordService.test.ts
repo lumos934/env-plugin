@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { PasswordService } from '../../src/service/PasswordService.js'
-import { createMockPasswordRepo } from '../helpers/mockRepos.js'
+import { PasswordService } from '../../../src/service/PasswordService.js'
+import { createMockPasswordRepo } from '../../helpers/mockRepos.js'
 import {
   createPasswordFixture,
   createPasswordCreateFixture,
-} from '../helpers/fixtures.js'
+} from '../../helpers/fixtures.js'
 
 describe('PasswordService', () => {
   let service: PasswordService

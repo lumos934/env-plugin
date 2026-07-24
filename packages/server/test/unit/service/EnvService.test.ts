@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { EnvService } from '../../src/service/EnvService.js'
+import { EnvService } from '../../../src/service/EnvService.js'
 import {
   createMockEnvRepo,
   createMockDevServerRepo,
   createMockRouteRuleRepo,
-} from '../helpers/mockRepos.js'
-import { createEnvFixture, createEnvCreateFixture } from '../helpers/fixtures.js'
+} from '../../helpers/mockRepos.js'
+import { createEnvFixture, createEnvCreateFixture } from '../../helpers/fixtures.js'
 
 // Mock PreProxyServer 避免创建真实 HTTP 服务
-vi.mock('../../src/service/PreProxyServer.js', () => ({
+vi.mock('../../../src/service/PreProxyServer.js', () => ({
   default: {
     create: vi.fn().mockResolvedValue({}),
     stopServer: vi.fn().mockResolvedValue(undefined),

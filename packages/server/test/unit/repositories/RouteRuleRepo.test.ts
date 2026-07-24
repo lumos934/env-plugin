@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createMemoryDb, setCurrentDb, getCurrentDb } from '../helpers/db.js'
-import { createRouteRuleFixture } from '../helpers/fixtures.js'
-import { RouteRuleRepo } from '../../src/repositories/RouteRuleRepo.js'
+import { createMemoryDb, setCurrentDb, getCurrentDb } from '../../helpers/db.js'
+import { createRouteRuleFixture } from '../../helpers/fixtures.js'
+import { RouteRuleRepo } from '../../../src/repositories/RouteRuleRepo.js'
 
-vi.mock('../../src/repositories/database.js', () => ({
+vi.mock('../../../src/repositories/database.js', () => ({
   getDatabase: () => getCurrentDb(),
   startDatabase: () => Promise.resolve(getCurrentDb()),
 }))
