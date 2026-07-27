@@ -8,7 +8,7 @@ import type {
   RouteRuleCreate,
   PasswordModel,
   PasswordCreate,
-} from '../src/types/index.js'
+} from '../../src/types/index.js'
 
 // ---- DevServer ----
 

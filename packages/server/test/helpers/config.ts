@@ -1,4 +1,4 @@
-import type { EnvmConfigInterface } from '../src/types/index.js'
+import type { EnvmConfigInterface } from '../../src/types/index.js'
 
 const defaultTestConfig: EnvmConfigInterface = {
   port: 3099,

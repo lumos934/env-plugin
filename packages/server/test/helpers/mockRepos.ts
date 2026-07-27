@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
-import type { EnvRepo } from '../src/repositories/EnvRepo.js'
-import type { DevServerRepo } from '../src/repositories/DevServerRepo.js'
-import type { RouteRuleRepo } from '../src/repositories/RouteRuleRepo.js'
-import type { PasswordRepo } from '../src/repositories/PasswordRepo.js'
+import type { EnvRepo } from '../../src/repositories/EnvRepo.js'
+import type { DevServerRepo } from '../../src/repositories/DevServerRepo.js'
+import type { RouteRuleRepo } from '../../src/repositories/RouteRuleRepo.js'
+import type { PasswordRepo } from '../../src/repositories/PasswordRepo.js'
 
 /**
  * 创建 Mock EnvRepo，所有方法默认为 vi.fn()
