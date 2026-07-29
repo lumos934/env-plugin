@@ -7,6 +7,7 @@ import {
   RouteRuleUpdate,
   RouteRuleModel,
 } from "../types/index.js";
+import { AppError } from "../utils/errors.js";
 
 /**
  * 路由规则服务类
@@ -51,7 +52,7 @@ class RouteRuleService {
    * 1. 校验输入参数合法性 2. 检查目标环境是否存在 3. 生成唯一ID 4. 保存
    * @param routeRuleItem - 待添加的路由规则信息（不含ID）
    * @returns 新创建的路由规则
-   * @throws {Error} 当输入参数不合法或目标环境不存在时抛出
+   * @throws {AppError} 当输入参数不合法或目标环境不存在时抛出
    */
   handleAdd(routeRuleItem: RouteRuleCreate): RouteRuleModel {
     const { envId, pathPrefix, targetEnvId } = routeRuleItem;
@@ -60,18 +61,18 @@ class RouteRuleService {
     if (targetEnvId) {
       const targetEnv = this.envRepo.findOneById(targetEnvId);
       if (!targetEnv) {
-        throw new Error(`添加失败，目标环境【${targetEnvId}】不存在`);
+        throw new AppError(`添加失败，目标环境【${targetEnvId}】不存在`);
       }
     }
 
     // 目标环境不能为空
     if (!targetEnvId) {
-      throw new Error("添加失败，目标环境不能为空");
+      throw new AppError("添加失败，目标环境不能为空");
     }
 
     // 检查是否已存在相同路径前缀的规则（同一环境下）
     if (this.routeRuleRepo.existsByEnvIdAndPathPrefix(envId, pathPrefix)) {
-      throw new Error(
+      throw new AppError(
         `添加失败，该环境下已存在路径前缀【${pathPrefix}】的规则`
       );
     }
@@ -95,7 +96,7 @@ class RouteRuleService {
    * 1. 校验输入参数 2. 检查规则是否存在 3. 检查目标环境是否存在 4. 执行更新
    * @param routeRuleItem - 包含待更新路由规则ID及字段的对象
    * @returns 更新后的路由规则
-   * @throws {Error} 当输入参数不合法或规则/目标环境不存在时抛出
+   * @throws {AppError} 当输入参数不合法或规则/目标环境不存在时抛出
    */
   handleUpdate(routeRuleItem: RouteRuleUpdate): RouteRuleModel {
     const { id, targetEnvId } = routeRuleItem;
@@ -103,7 +104,7 @@ class RouteRuleService {
     // 检查路由规则是否存在
     const existingRule = this.routeRuleRepo.findOneById(id);
     if (!existingRule) {
-      throw new Error(`更新失败，路由规则【${id}】不存在`);
+      throw new AppError(`更新失败，路由规则【${id}】不存在`);
     }
 
     // 判断是否需要清空目标环境（只有明确发送空字符串时才清空）
@@ -114,7 +115,7 @@ class RouteRuleService {
       // 更新了目标环境，检查目标环境是否存在
       const targetEnv = this.envRepo.findOneById(targetEnvId);
       if (!targetEnv) {
-        throw new Error(`更新失败，目标环境【${targetEnvId}】不存在`);
+        throw new AppError(`更新失败，目标环境【${targetEnvId}】不存在`);
       }
     }
 
@@ -129,7 +130,7 @@ class RouteRuleService {
           routeRuleItem.pathPrefix
         )
       ) {
-        throw new Error(
+        throw new AppError(
           `更新失败，该环境下已存在路径前缀【${routeRuleItem.pathPrefix}】的规则`
         );
       }
@@ -149,7 +150,7 @@ class RouteRuleService {
    * 删除指定路由规则
    * 1. 校验输入参数 2. 检查规则是否存在 3. 执行删除操作
    * @param routeRuleItem - 包含待删除路由规则ID的对象
-   * @throws {Error} 当输入参数不合法或规则不存在时抛出
+   * @throws {AppError} 当输入参数不合法或规则不存在时抛出
    */
   handleDelete(routeRuleItem: RouteRuleDelete): void {
     const { id } = routeRuleItem;
@@ -157,7 +158,7 @@ class RouteRuleService {
     // 检查路由规则是否存在
     const existingRule = this.routeRuleRepo.findOneById(id);
     if (!existingRule) {
-      throw new Error(`删除失败，路由规则【${id}】不存在`);
+      throw new AppError(`删除失败，路由规则【${id}】不存在`);
     }
 
     // 执行删除

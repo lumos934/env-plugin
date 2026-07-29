@@ -68,7 +68,7 @@ class DevServerController {
   handleCreateDevServer(req: Request, res: Response, next: NextFunction) {
     try {
       // 验证请求体
-      const devServerItem = req.body as DevServerCreate;
+      const devServerItem = req.dto as DevServerCreate;
 
       this.devServerService.handleAddDevServer(devServerItem);
       res.success("开发服务器创建成功");
