@@ -255,8 +255,6 @@ describe('Env API E2E', () => {
   })
 
   // ---- 业务逻辑错误 ----
-  // 注意：EnvController.handleDeleteEnv 缺少 await，导致
-  // Service 中的同步 throw 成为 unhandled rejection，res.success() 先于错误处理被调用
 
   describe('业务逻辑错误', () => {
     it('添加重复 apiBaseUrl 应返回错误', async () => {
@@ -285,14 +283,13 @@ describe('Env API E2E', () => {
       expect(res.body.message).toContain('不存在')
     })
 
-    // BUG: Controller 缺少 await handleDeleteEnv，同步抛出的 AppError
-    // 变为 unhandled rejection，res.success() 先执行
-    it('删除不存在的环境因 Controller bug 返回 200', async () => {
+    it('删除不存在的环境应返回错误', async () => {
       const res = await request(app)
         .post('/dev-manage-api/env/delete')
         .send({ id: 'non-existent-id' })
 
-      expect(res.body.code).toBe(200)
+      expect(res.body.code).toBe(500)
+      expect(res.body.message).toContain('不存在')
     })
 
     it('启动不存在的环境应返回错误', async () => {

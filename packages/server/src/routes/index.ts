@@ -8,6 +8,8 @@ import { RouteRuleController } from "../controllers/RouteRuleController.js";
 import { PasswordController } from "../controllers/PasswordController.js";
 import { getConfig } from "../utils/ResolveConfig.js";
 import { toDTO } from "../middleware/dto.middleware.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { registerRoutes, RouteDefinition } from "../utils/routeBuilder.js";
 import {
   EnvPrimarySchema,
   EnvCreateSchema,
@@ -25,77 +27,177 @@ import {
   PasswordUpdateSchema,
 } from "../types/index.js";
 
-// 1. 创建各模块路由
+// 辅助函数：绑定 Controller 方法，确保 this 指向正确
+const bind = <T, K extends keyof T>(obj: T, method: K) =>
+  (obj[method] as (...args: unknown[]) => unknown).bind(obj);
+
+// 1. 创建各模块路由（声明式 RouteDefinition 配置）
 const createEnvRoutes = (controller: EnvController) => {
   const router = Router();
-  router.get("/getlist", (...res) => controller.handleGetList(...res));
-  router.post("/add", toDTO(EnvCreateSchema), (...res) =>
-    controller.handleAddEnv(...res)
-  );
-  router.post("/delete", toDTO(EnvPrimarySchema), (...res) =>
-    controller.handleDeleteEnv(...res)
-  );
-  router.post("/update", toDTO(EnvUpdateSchema), (...res) =>
-    controller.handleUpdateEnv(...res)
-  );
-  router.post("/start", toDTO(EnvPrimarySchema), (...res) =>
-    controller.handleStartServer(...res)
-  );
-  router.post("/stop", toDTO(EnvPrimarySchema), (...res) =>
-    controller.handleStopServer(...res)
-  );
-  router.put("/sort", toDTO(EnvSortSchema), (...res) =>
-    controller.handleUpdateSortOrder(...res)
-  );
-  return router;
+  const routes: RouteDefinition[] = [
+    {
+      method: "get",
+      path: "/getlist",
+      handler: bind(controller, "handleGetList") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/add",
+      middleware: [toDTO(EnvCreateSchema)],
+      handler: bind(controller, "handleAddEnv") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/delete",
+      middleware: [toDTO(EnvPrimarySchema)],
+      handler: asyncHandler(
+        bind(controller, "handleDeleteEnv"),
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/update",
+      middleware: [toDTO(EnvUpdateSchema)],
+      handler: bind(controller, "handleUpdateEnv") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/start",
+      middleware: [toDTO(EnvPrimarySchema)],
+      handler: asyncHandler(
+        bind(controller, "handleStartServer"),
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/stop",
+      middleware: [toDTO(EnvPrimarySchema)],
+      handler: asyncHandler(
+        bind(controller, "handleStopServer"),
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "put",
+      path: "/sort",
+      middleware: [toDTO(EnvSortSchema)],
+      handler: bind(
+        controller,
+        "handleUpdateSortOrder",
+      ) as RouteDefinition["handler"],
+    },
+  ];
+  return registerRoutes(router, routes);
 };
 
 const createDevServerRoutes = (controller: DevServerController) => {
   const router = Router();
-  router.get("/list", (...res) => controller.handleGetDevServerList(...res));
-  router.post("/add", toDTO(DevServerCreateSchema), (...res) =>
-    controller.handleCreateDevServer(...res)
-  );
-  router.put("/update", toDTO(DevServerUpdateSchema), (...res) =>
-    controller.handleUpdateDevServer(...res)
-  );
-  router.put("/sort", toDTO(DevServerSortSchema), (...res) =>
-    controller.handleUpdateSortOrder(...res)
-  );
-  router.delete("/", toDTO(DevServerDeleteSchema), (...res) =>
-    controller.handleDeleteDevServer(...res)
-  );
-  return router;
+  const routes: RouteDefinition[] = [
+    {
+      method: "get",
+      path: "/list",
+      handler: bind(
+        controller,
+        "handleGetDevServerList",
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/add",
+      middleware: [toDTO(DevServerCreateSchema)],
+      handler: bind(
+        controller,
+        "handleCreateDevServer",
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "put",
+      path: "/update",
+      middleware: [toDTO(DevServerUpdateSchema)],
+      handler: bind(
+        controller,
+        "handleUpdateDevServer",
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "put",
+      path: "/sort",
+      middleware: [toDTO(DevServerSortSchema)],
+      handler: bind(
+        controller,
+        "handleUpdateSortOrder",
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "delete",
+      path: "/",
+      middleware: [toDTO(DevServerDeleteSchema)],
+      handler: bind(
+        controller,
+        "handleDeleteDevServer",
+      ) as RouteDefinition["handler"],
+    },
+  ];
+  return registerRoutes(router, routes);
 };
 
 const createRouteRuleRoutes = (controller: RouteRuleController) => {
   const router = Router();
-  router.get("/list/:envId", (...res) => controller.handleGetList(...res));
-  router.post("/add", toDTO(RouteRuleCreateSchema), (...res) =>
-    controller.handleAdd(...res)
-  );
-  router.post("/update", toDTO(RouteRuleUpdateSchema), (...res) =>
-    controller.handleUpdate(...res)
-  );
-  router.post("/delete", toDTO(RouteRuleDeleteSchema), (...res) =>
-    controller.handleDelete(...res)
-  );
-  return router;
+  const routes: RouteDefinition[] = [
+    {
+      method: "get",
+      path: "/list/:envId",
+      handler: bind(controller, "handleGetList") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/add",
+      middleware: [toDTO(RouteRuleCreateSchema)],
+      handler: bind(controller, "handleAdd") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/update",
+      middleware: [toDTO(RouteRuleUpdateSchema)],
+      handler: bind(controller, "handleUpdate") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/delete",
+      middleware: [toDTO(RouteRuleDeleteSchema)],
+      handler: bind(controller, "handleDelete") as RouteDefinition["handler"],
+    },
+  ];
+  return registerRoutes(router, routes);
 };
 
 const createPasswordRoutes = (controller: PasswordController) => {
   const router = Router();
-  router.get("/list/:envId", (...res) => controller.handleGetList(...res));
-  router.post("/add", toDTO(PasswordCreateSchema), (...res) =>
-    controller.handleAdd(...res)
-  );
-  router.post("/update", toDTO(PasswordUpdateSchema), (...res) =>
-    controller.handleUpdate(...res)
-  );
-  router.post("/delete", toDTO(PasswordDeleteSchema), (...res) =>
-    controller.handleDelete(...res)
-  );
-  return router;
+  const routes: RouteDefinition[] = [
+    {
+      method: "get",
+      path: "/list/:envId",
+      handler: bind(controller, "handleGetList") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/add",
+      middleware: [toDTO(PasswordCreateSchema)],
+      handler: bind(controller, "handleAdd") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/update",
+      middleware: [toDTO(PasswordUpdateSchema)],
+      handler: bind(controller, "handleUpdate") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/delete",
+      middleware: [toDTO(PasswordDeleteSchema)],
+      handler: bind(controller, "handleDelete") as RouteDefinition["handler"],
+    },
+  ];
+  return registerRoutes(router, routes);
 };
 
 const createCommonRoutes = () => {
@@ -127,13 +229,13 @@ export const createRouter = (): Router => {
   const container = Container.getInstance();
   const envController = container.get<EnvController>("envController");
   const devServerController = container.get<DevServerController>(
-    "devServerController"
+    "devServerController",
   );
   const routeRuleController = container.get<RouteRuleController>(
-    "routeRuleController"
+    "routeRuleController",
   );
   const passwordController = container.get<PasswordController>(
-    "passwordController"
+    "passwordController",
   );
 
   // 挂载模块路由

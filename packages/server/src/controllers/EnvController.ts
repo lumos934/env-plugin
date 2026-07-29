@@ -49,14 +49,18 @@ class EnvController {
    * @param res - Express响应对象，用于返回处理结果
    * @param next - Express下一步中间件函数，用于错误处理
    */
-  handleDeleteEnv(req: Request, res: Response, next: NextFunction): void {
+  async handleDeleteEnv(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       // 验证请求数据
       const envData = req.dto as EnvDelete;
       envLogger.info({ envData }, "接收删除环境请求");
 
-      // 调用服务层处理业务
-      this.envService.handleDeleteEnv(envData);
+      // 调用服务层处理业务（异步操作，需要 await 否则 try/catch 无法捕获错误）
+      await this.envService.handleDeleteEnv(envData);
 
       // 返回成功响应
       res.success({ message: "环境删除成功" });
@@ -130,6 +134,7 @@ class EnvController {
 
       if (!detail) {
         res.error("环境不存在");
+        return;
       }
 
       // 返回成功响应（包含详情数据）

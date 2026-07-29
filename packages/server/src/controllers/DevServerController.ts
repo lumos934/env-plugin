@@ -24,6 +24,7 @@ class DevServerController {
       const list = this.devServerService.handleGetList();
       res.success({ list });
     } catch (error) {
+      devServerLogger.error(error, "开发服务器列表查询请求处理失败");
       next(error);
     }
   }
@@ -46,6 +47,7 @@ class DevServerController {
 
       if (!detail) {
         res.error("环境不存在");
+        return;
       }
 
       // 返回成功响应（包含详情数据）
@@ -54,6 +56,7 @@ class DevServerController {
         data: detail,
       });
     } catch (error) {
+      devServerLogger.error(error, "开发服务器详情查询请求处理失败");
       next(error);
     }
   }
@@ -71,8 +74,9 @@ class DevServerController {
       const devServerItem = req.dto as DevServerCreate;
 
       this.devServerService.handleAddDevServer(devServerItem);
-      res.success("开发服务器创建成功");
+      res.success({ message: "开发服务器创建成功" });
     } catch (error) {
+      devServerLogger.error(error, "创建开发服务器请求处理失败");
       next(error);
     }
   }
@@ -93,6 +97,7 @@ class DevServerController {
 
       res.success({ message: "开发服务器更新成功", server: updatedServer });
     } catch (error) {
+      devServerLogger.error(error, "更新开发服务器请求处理失败");
       next(error);
     }
   }
@@ -110,6 +115,7 @@ class DevServerController {
       this.devServerService.handleDeleteDevServer(devServerData);
       res.success({ message: "开发服务器删除成功" });
     } catch (error) {
+      devServerLogger.error(error, "删除开发服务器请求处理失败");
       next(error);
     }
   }
@@ -128,6 +134,7 @@ class DevServerController {
       this.devServerService.handleUpdateSortOrder(sortData);
       res.success({ message: "排序更新成功" });
     } catch (error) {
+      devServerLogger.error(error, "排序更新请求处理失败");
       next(error);
     }
   }
