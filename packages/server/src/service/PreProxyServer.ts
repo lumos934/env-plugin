@@ -14,6 +14,8 @@ import { DevServerRepo } from "../repositories/DevServerRepo.js";
 import { RouteRuleRepo } from "../repositories/RouteRuleRepo.js";
 import { EnvModel } from "../types/index.js";
 import { devServerLogger } from "../utils/logger.js";
+import { requestLogEmitter } from "./RequestLogService.js";
+import { v4 as uuidv4 } from "uuid";
 
 class PreProxyServer {
   /**
@@ -197,6 +199,10 @@ class PreProxyServer {
         proxyReq: (proxyReq, req: IncomingMessage & { path?: string }) => {
           const requestPath = req.path || "/";
 
+          // 记录请求开始时间和日志 ID（用于 proxyRes 中的日志捕获）
+          (req as unknown as Record<string, unknown>).__logStartTime = Date.now();
+          (req as unknown as Record<string, unknown>).__logId = uuidv4();
+
           // 优先使用路由规则的目标地址，否则使用环境默认的 apiBaseUrl
           const customTarget = this.matchRouteRule(requestPath);
           const target = customTarget || `${this.getEnvItem()?.apiBaseUrl}`;
@@ -204,6 +210,43 @@ class PreProxyServer {
           this._rewrieCookieOnProxyReq(proxyReq, req);
         },
         proxyRes: (proxyRes, req, res) => {
+          // --- 请求日志捕获 ---
+          const startTime = (req as unknown as Record<string, unknown>)
+            .__logStartTime as number | undefined;
+          if (startTime) {
+            const duration = Date.now() - startTime;
+            const requestPath = (req as unknown as Record<string, unknown>).path as string || "/";
+            const envItem = this.getEnvItem();
+
+            // 确定命中的路由规则
+            const routeRules = this.routeRuleRepo.getByEnvId(this.envId);
+            const enabledRules = routeRules.filter(
+              (rule) => rule.enabled !== false
+            );
+            const sortedRules = [...enabledRules].sort(
+              (a, b) => b.pathPrefix.length - a.pathPrefix.length
+            );
+            let matchedRule = "default";
+            for (const rule of sortedRules) {
+              if (minimatch(requestPath, rule.pathPrefix, { dot: true })) {
+                matchedRule = rule.pathPrefix;
+                break;
+              }
+            }
+
+            requestLogEmitter.emit("log", {
+              id: (req as unknown as Record<string, unknown>).__logId as string || uuidv4(),
+              timestamp: startTime,
+              method: (req as unknown as Record<string, unknown>).method as string || "UNKNOWN",
+              url: requestPath,
+              statusCode: proxyRes.statusCode || 0,
+              duration,
+              matchedRule,
+              envId: this.envId,
+              envName: envItem?.name || envItem?.apiBaseUrl || "",
+            });
+          }
+
           this._rewriteSetCookieOnProxyRes(proxyRes);
           this._rewriteLoginRedirect(proxyRes, req, res);
         },

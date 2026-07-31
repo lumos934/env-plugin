@@ -10,6 +10,8 @@ import { RouteRuleRepo } from "./repositories/RouteRuleRepo.js";
 import { RouteRuleService } from "./service/RouteRuleService.js";
 import { PasswordRepo } from "./repositories/PasswordRepo.js";
 import { PasswordService } from "./service/PasswordService.js";
+import { RequestLogService } from "./service/RequestLogService.js";
+import { RequestLogController } from "./controllers/RequestLogController.js";
 import { ProxyAutoStarter } from "./service/ProxyAutoStarterService.js";
 
 class Container {
@@ -51,6 +53,13 @@ class Container {
     this.register(
       "passwordController",
       new PasswordController(this.get("passwordService"))
+    );
+    // 请求日志服务和控制器
+    const requestLogService = new RequestLogService();
+    this.register("requestLogService", requestLogService);
+    this.register(
+      "requestLogController",
+      new RequestLogController(requestLogService)
     );
     setTimeout(() => {
       new ProxyAutoStarter(envRepo, this.get("envService"), routeRuleRepo);

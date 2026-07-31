@@ -6,6 +6,7 @@ import { EnvController } from "../controllers/EnvController.js";
 import { DevServerController } from "../controllers/DevServerController.js";
 import { RouteRuleController } from "../controllers/RouteRuleController.js";
 import { PasswordController } from "../controllers/PasswordController.js";
+import { RequestLogController } from "../controllers/RequestLogController.js";
 import { getConfig } from "../utils/ResolveConfig.js";
 import { toDTO } from "../middleware/dto.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -200,6 +201,18 @@ const createPasswordRoutes = (controller: PasswordController) => {
   return registerRoutes(router, routes);
 };
 
+const createRequestLogRoutes = (controller: RequestLogController) => {
+  const router = Router();
+  const routes: RouteDefinition[] = [
+    {
+      method: "get",
+      path: "/list",
+      handler: bind(controller, "handleGetLogs") as RouteDefinition["handler"],
+    },
+  ];
+  return registerRoutes(router, routes);
+};
+
 const createCommonRoutes = () => {
   const router = Router();
   router.get("/are-you-ok", (req, res) => res.success({}, "I'm ok!"));
@@ -237,12 +250,16 @@ export const createRouter = (): Router => {
   const passwordController = container.get<PasswordController>(
     "passwordController",
   );
+  const requestLogController = container.get<RequestLogController>(
+    "requestLogController",
+  );
 
   // 挂载模块路由
   rootRouter.use("/env", createEnvRoutes(envController));
   rootRouter.use("/server", createDevServerRoutes(devServerController));
   rootRouter.use("/route-rule", createRouteRuleRoutes(routeRuleController));
   rootRouter.use("/password", createPasswordRoutes(passwordController));
+  rootRouter.use("/request-log", createRequestLogRoutes(requestLogController));
   rootRouter.use("/", createCommonRoutes());
 
   return rootRouter;

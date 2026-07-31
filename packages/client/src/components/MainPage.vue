@@ -6,6 +6,8 @@ import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { apiPrefix, fetchData } from '@/utils'
 import DevServerTable from './DevServerTable.vue'
+import RequestLogTable from './RequestLogTable.vue'
+import type { RequestLogEntry } from '@envm/schemas'
 import { Plus, Refresh, Delete } from '@element-plus/icons-vue'
 
 const refreshLoading = ref(false)
@@ -32,6 +34,10 @@ onMounted(() => {
 
 const apiServerTableRef = ref()
 const devServerTableRef = ref()
+
+// 请求日志状态（客户端镜像 500 条上限）
+const requestLogs = ref<RequestLogEntry[]>([])
+const MAX_LOG_ENTRIES = 500
 /**
  * 刷新表格
  */
@@ -52,6 +58,8 @@ const refreshTable = (tab: { props: { name: string } }) => {
     apiServerTableRef.value?.refresh()
   } else if (tab.props.name === 'dev-server') {
     devServerTableRef.value?.refresh()
+  } else if (tab.props.name === 'request-log') {
+    // 请求日志是实时推送的，无需刷新
   }
 }
 
@@ -96,6 +104,15 @@ const startWs = () => {
     const data = JSON.parse(event.data)
     if (data.action === 'filechange') {
       refreshList()
+    } else if (data.action === 'requestlog_history') {
+      // 初始加载全量历史
+      requestLogs.value = data.data || []
+    } else if (data.action === 'requestlog') {
+      // 增量追加新日志
+      if (requestLogs.value.length >= MAX_LOG_ENTRIES) {
+        requestLogs.value.shift()
+      }
+      requestLogs.value.push(data.data)
     }
   })
 
@@ -161,6 +178,12 @@ const startWs = () => {
       name="dev-server"
     >
       <dev-server-table ref="devServerTableRef"></dev-server-table>
+    </el-tab-pane>
+    <el-tab-pane
+      label="请求日志"
+      name="request-log"
+    >
+      <request-log-table :logs="requestLogs" />
     </el-tab-pane>
   </el-tabs>
 
