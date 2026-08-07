@@ -200,7 +200,11 @@ const handleClear = () => {
           >
             {{ scope.row.matchedRule }}
           </el-tag>
-          <el-text v-else size="small" type="info">默认</el-text>
+          <el-text
+            v-else
+            size="small"
+            type="info"
+          >默认</el-text>
         </template>
       </el-table-column>
       <el-table-column

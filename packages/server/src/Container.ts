@@ -12,6 +12,8 @@ import { PasswordRepo } from "./repositories/PasswordRepo.js";
 import { PasswordService } from "./service/PasswordService.js";
 import { RequestLogService } from "./service/RequestLogService.js";
 import { RequestLogController } from "./controllers/RequestLogController.js";
+import { ImportExportService } from "./service/ImportExportService.js";
+import { ImportExportController } from "./controllers/ImportExportController.js";
 import { ProxyAutoStarter } from "./service/ProxyAutoStarterService.js";
 
 class Container {
@@ -60,6 +62,15 @@ class Container {
     this.register(
       "requestLogController",
       new RequestLogController(requestLogService)
+    );
+    // 导入导出服务和控制器
+    this.register(
+      "importExportService",
+      new ImportExportService(envRepo, devServerRepo, routeRuleRepo, passwordRepo),
+    );
+    this.register(
+      "importExportController",
+      new ImportExportController(this.get("importExportService")),
     );
     setTimeout(() => {
       new ProxyAutoStarter(envRepo, this.get("envService"), routeRuleRepo);

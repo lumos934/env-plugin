@@ -9,10 +9,25 @@ import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
 import DevServerTable from './DevServerTable.vue'
 import RequestLogTable from './RequestLogTable.vue'
+import ImportExportDialog from './ImportExportDialog.vue'
 import type { RequestLogEntry } from '@envm/schemas'
-import { Plus, Refresh, Delete } from '@element-plus/icons-vue'
+import { Plus, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 
 const refreshLoading = ref(false)
+
+// 导入/导出对话框状态
+const importExportVisible = ref(false)
+const importExportMode = ref<'export' | 'import'>('export')
+
+const handleExport = () => {
+  importExportMode.value = 'export'
+  importExportVisible.value = true
+}
+
+const handleImport = () => {
+  importExportMode.value = 'import'
+  importExportVisible.value = true
+}
 
 const apiServerEditRef = ref()
 const devServerEditRef = ref()
@@ -162,6 +177,22 @@ const startWs = () => {
   >
     清除所有代理 Cookie
   </el-button>
+  <el-button
+    type="primary"
+    :icon="Download"
+    plain
+    @click="handleExport"
+  >
+    导出配置
+  </el-button>
+  <el-button
+    type="primary"
+    :icon="Upload"
+    plain
+    @click="handleImport"
+  >
+    导入配置
+  </el-button>
   <br />
   <br />
   <el-tabs
@@ -197,4 +228,10 @@ const startWs = () => {
     ref="devServerEditRef"
     @refreshList="refreshList"
   ></dev-server-edit>
+
+  <import-export-dialog
+    v-model="importExportVisible"
+    :mode="importExportMode"
+    @refreshList="refreshList"
+  />
 </template>

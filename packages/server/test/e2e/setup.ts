@@ -16,6 +16,10 @@ import { EnvController } from '../../src/controllers/EnvController.js'
 import { DevServerController } from '../../src/controllers/DevServerController.js'
 import { RouteRuleController } from '../../src/controllers/RouteRuleController.js'
 import { PasswordController } from '../../src/controllers/PasswordController.js'
+import { ImportExportService } from '../../src/service/ImportExportService.js'
+import { ImportExportController } from '../../src/controllers/ImportExportController.js'
+import { RequestLogService } from '../../src/service/RequestLogService.js'
+import { RequestLogController } from '../../src/controllers/RequestLogController.js'
 
 // ---- Hoisted mutable state ----
 // vi.mock 调用在编译时被提升到文件顶部，因此通过 vi.hoisted() 声明可变状态，
@@ -103,6 +107,14 @@ export function createTestApp(): express.Express {
   const routeRuleController = new RouteRuleController(routeRuleService)
   const passwordController = new PasswordController(passwordService)
 
+  // 导入导出服务和控制器
+  const importExportService = new ImportExportService(envRepo, devServerRepo, routeRuleRepo, passwordRepo)
+  const importExportController = new ImportExportController(importExportService)
+
+  // 请求日志服务和控制器
+  const requestLogService = new RequestLogService()
+  const requestLogController = new RequestLogController(requestLogService)
+
   // 5. 注册到 hoisted deps（桥接到 mock Container）
   // 清空旧值再注册新的，避免跨测试污染
   Object.keys(deps).forEach((k) => delete deps[k])
@@ -111,6 +123,8 @@ export function createTestApp(): express.Express {
     devServerController,
     routeRuleController,
     passwordController,
+    importExportController,
+    requestLogController,
   })
 
   // 6. 构建 Express app（middleware 链与 PostProxyServer 一致）

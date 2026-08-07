@@ -7,6 +7,7 @@ import { DevServerController } from "../controllers/DevServerController.js";
 import { RouteRuleController } from "../controllers/RouteRuleController.js";
 import { PasswordController } from "../controllers/PasswordController.js";
 import { RequestLogController } from "../controllers/RequestLogController.js";
+import { ImportExportController } from "../controllers/ImportExportController.js";
 import { getConfig } from "../utils/ResolveConfig.js";
 import { toDTO } from "../middleware/dto.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -26,6 +27,8 @@ import {
   PasswordCreateSchema,
   PasswordDeleteSchema,
   PasswordUpdateSchema,
+  ExportRequestSchema,
+  ImportRequestSchema,
 } from "../types/index.js";
 
 // 辅助函数：绑定 Controller 方法，确保 this 指向正确
@@ -33,7 +36,7 @@ const bind = <T, K extends keyof T>(obj: T, method: K) =>
   (obj[method] as (...args: unknown[]) => unknown).bind(obj);
 
 // 1. 创建各模块路由（声明式 RouteDefinition 配置）
-const createEnvRoutes = (controller: EnvController) => {
+const createEnvRoutes = (controller: EnvController, importExportController: ImportExportController) => {
   const router = Router();
   const routes: RouteDefinition[] = [
     {
@@ -85,6 +88,18 @@ const createEnvRoutes = (controller: EnvController) => {
         controller,
         "handleUpdateSortOrder",
       ) as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/export",
+      middleware: [toDTO(ExportRequestSchema)],
+      handler: bind(importExportController, "handleExport") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/import",
+      middleware: [toDTO(ImportRequestSchema)],
+      handler: bind(importExportController, "handleImport") as RouteDefinition["handler"],
     },
   ];
   return registerRoutes(router, routes);
@@ -253,9 +268,12 @@ export const createRouter = (): Router => {
   const requestLogController = container.get<RequestLogController>(
     "requestLogController",
   );
+  const importExportController = container.get<ImportExportController>(
+    "importExportController",
+  );
 
   // 挂载模块路由
-  rootRouter.use("/env", createEnvRoutes(envController));
+  rootRouter.use("/env", createEnvRoutes(envController, importExportController));
   rootRouter.use("/server", createDevServerRoutes(devServerController));
   rootRouter.use("/route-rule", createRouteRuleRoutes(routeRuleController));
   rootRouter.use("/password", createPasswordRoutes(passwordController));
