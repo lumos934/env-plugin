@@ -224,6 +224,30 @@ class EnvController {
   }
 
   /**
+   * 切换代理目标（DevServer）
+   * @description 处理同一环境下切换 DevServer 绑定的 POST 请求，不换端口、不重启代理
+   * @param req - Express请求对象，包含 envId 和 devServerId（在req.dto中）
+   * @param res - Express响应对象，用于返回更新后的环境信息
+   * @param next - Express下一步中间件函数，用于错误处理
+   */
+  handleSwitchProxy(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const { envId, devServerId } = req.dto as { envId: string; devServerId: string };
+      envLogger.info({ envId, devServerId }, "接收代理目标切换请求");
+
+      const updatedEnv = this.envService.handleSwitchProxy(envId, devServerId);
+
+      res.success({
+        message: "代理目标切换成功",
+        data: updatedEnv,
+      });
+    } catch (error) {
+      envLogger.error(error, "代理目标切换请求处理失败");
+      next(error);
+    }
+  }
+
+  /**
    * 切换环境
    * @description 处理环境切换的POST请求（原子操作：先启动目标，再停止当前）
    * @param req - Express请求对象，包含待切换的环境ID（在req.dto中）

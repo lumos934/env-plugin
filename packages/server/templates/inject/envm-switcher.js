@@ -48,6 +48,7 @@ async function apiFetch(url, options = {}) {
 class EnvmSwitcher {
   constructor() {
     this.envList = [];
+    this.devServerList = [];
     this.currentEnvId = null;
     this.isPanelOpen = false;
     this.isSwitching = false;
@@ -133,9 +134,9 @@ class EnvmSwitcher {
         width: 48px;
         height: 48px;
         border-radius: 50%;
-        background: var(--envm-bg);
-        border: 2px solid var(--envm-border);
-        box-shadow: var(--envm-shadow);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.35);
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -144,52 +145,87 @@ class EnvmSwitcher {
         transition: transform var(--envm-transition), box-shadow var(--envm-transition);
         user-select: none;
         position: relative;
-        overflow: hidden;
+        overflow: visible;
+      }
+
+      .ball::after {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        transition: border-color var(--envm-transition);
+      }
+
+      .ball.running::after {
+        border-color: rgba(103, 194, 58, 0.7);
+        box-shadow: 0 0 12px rgba(103, 194, 58, 0.4), inset 0 0 12px rgba(103, 194, 58, 0.15);
+      }
+
+      .ball.stopped::after {
+        border-color: rgba(245, 108, 108, 0.7);
+        box-shadow: 0 0 12px rgba(245, 108, 108, 0.4), inset 0 0 12px rgba(245, 108, 108, 0.15);
+      }
+
+      .ball.loading::after {
+        border-color: rgba(230, 162, 60, 0.7);
+        box-shadow: 0 0 12px rgba(230, 162, 60, 0.4), inset 0 0 12px rgba(230, 162, 60, 0.15);
+        animation: ringPulse 1.2s ease-in-out infinite;
       }
 
       .ball:hover {
-        transform: scale(1.08);
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+        transform: scale(1.1);
+        box-shadow: 0 6px 28px rgba(102, 126, 234, 0.5);
       }
 
       .ball:active {
-        transform: scale(0.96);
+        transform: scale(0.94);
       }
 
       .ball-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--envm-text);
+        font-size: 12px;
+        font-weight: 800;
+        color: #ffffff;
         line-height: 1;
         letter-spacing: -0.5px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 1;
       }
 
       .ball-dot {
         position: absolute;
-        top: 6px;
-        right: 6px;
-        width: 9px;
-        height: 9px;
+        top: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        border: 1.5px solid var(--envm-bg);
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        z-index: 2;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
       }
 
       .ball-dot.running {
-        background: var(--envm-running);
+        background: #67c23a;
       }
 
       .ball-dot.stopped {
-        background: var(--envm-stopped);
+        background: #f56c6c;
       }
 
       .ball-dot.loading {
-        background: var(--envm-warning);
+        background: #e6a23c;
         animation: pulse 1s ease-in-out infinite;
       }
 
       @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.75); }
+      }
+
+      @keyframes ringPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.5; }
       }
 
       /* ========== 面板 ========== */
@@ -396,6 +432,64 @@ class EnvmSwitcher {
         color: #fff;
       }
 
+      /* ========== 代理目标子项（DevServer 切换） ========== */
+      .proxy-target-item {
+        padding: 7px 16px 7px 36px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: default;
+        transition: background 0.15s;
+        border-left: 3px solid transparent;
+        font-size: var(--envm-font-size-sm);
+        background: var(--envm-bg);
+      }
+
+      .proxy-target-item:hover {
+        background: var(--envm-accent-light);
+      }
+
+      .proxy-target-item.current {
+        border-left-color: var(--envm-accent);
+        background: var(--envm-accent-light);
+      }
+
+      .proxy-target-item.switching {
+        pointer-events: none;
+        opacity: 0.6;
+      }
+
+      .proxy-target-indent {
+        width: 0;
+        flex-shrink: 0;
+      }
+
+      .proxy-target-active {
+        flex-shrink: 0;
+        color: var(--envm-accent);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .proxy-target-btn {
+        flex-shrink: 0;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--envm-accent);
+        background: transparent;
+        color: var(--envm-accent);
+        cursor: pointer;
+        font-family: var(--envm-font);
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .proxy-target-btn:hover {
+        background: var(--envm-accent);
+        color: #fff;
+      }
+
       /* ========== 空状态 ========== */
       .panel-empty {
         padding: 32px 16px;
@@ -430,7 +524,7 @@ class EnvmSwitcher {
 
   _render() {
     this.shadow.innerHTML += /* html */ `
-      <div id="ball" class="ball" title="环境切换">
+      <div id="ball" class="ball stopped" title="环境切换">
         <span id="ballLabel" class="ball-label">...</span>
         <span id="ballDot" class="ball-dot stopped"></span>
       </div>
@@ -536,6 +630,15 @@ class EnvmSwitcher {
     }
   }
 
+  async _fetchDevServerList() {
+    try {
+      const data = await apiFetch(`${API_PREFIX}/server/list`);
+      this.devServerList = (data && data.list) || [];
+    } catch {
+      // 保持上一次的列表
+    }
+  }
+
   async _startEnv(id) {
     await apiFetch(`${API_PREFIX}/env/start`, {
       method: "POST",
@@ -551,9 +654,16 @@ class EnvmSwitcher {
   }
 
   async _switchEnv(currentEnvId, targetEnvId) {
-    await apiFetch(`${API_PREFIX}/env/switch`, {
+    return await apiFetch(`${API_PREFIX}/env/switch`, {
       method: "POST",
       body: JSON.stringify({ currentEnvId, targetEnvId }),
+    });
+  }
+
+  async _switchProxy(envId, devServerId) {
+    return await apiFetch(`${API_PREFIX}/env/proxy/switch`, {
+      method: "POST",
+      body: JSON.stringify({ envId, devServerId }),
     });
   }
 
@@ -568,6 +678,7 @@ class EnvmSwitcher {
     const currentEnv = this.envList.find((e) => e.id === this.currentEnvId);
     const label = this._$("ballLabel");
     const dot = this._$("ballDot");
+    const ball = this._$("ball");
 
     if (currentEnv && currentEnv.port) {
       // 显示端口后两位
@@ -579,14 +690,19 @@ class EnvmSwitcher {
       label.textContent = "ENV";
     }
 
+    // 重置状态 class
+    ball.className = "ball";
     dot.className = "ball-dot";
+
+    let statusClass = "stopped";
     if (this.isSwitching) {
-      dot.classList.add("loading");
+      statusClass = "loading";
     } else if (currentEnv && currentEnv.status === "running") {
-      dot.classList.add("running");
-    } else {
-      dot.classList.add("stopped");
+      statusClass = "running";
     }
+
+    ball.classList.add(statusClass);
+    dot.classList.add(statusClass);
   }
 
   _updatePanel() {
@@ -598,9 +714,17 @@ class EnvmSwitcher {
       currentBar.style.display = "block";
       this._$("currentEnvName").textContent =
         currentEnv.name || currentEnv.apiBaseUrl || "当前环境";
-      this._$(
-        "currentEnvDetail"
-      ).textContent = `端口: ${currentEnv.port} | 状态: ${currentEnv.status === "running" ? "运行中" : "已停止"}`;
+
+      // 查找当前绑定的 DevServer 名称
+      const currentDS = this.devServerList.find(
+        (ds) => ds.id === currentEnv.devServerId
+      );
+      const dsLabel = currentDS
+        ? currentDS.name || currentDS.devServerUrl || "未知"
+        : "未绑定";
+
+      this._$("currentEnvDetail").innerHTML =
+        `端口: ${currentEnv.port} | Dev: ${this._escapeHtml(dsLabel)} | 状态: ${currentEnv.status === "running" ? "运行中" : "已停止"}`;
     } else {
       currentBar.style.display = "none";
     }
@@ -643,6 +767,21 @@ class EnvmSwitcher {
         this._handleEnvAction(env);
       });
     });
+
+    // 绑定 DevServer 代理目标按钮事件
+    listEl.querySelectorAll(".proxy-target-btn").forEach((btn) => {
+      const dsId = btn.dataset.dsId;
+      const devServer = this.devServerList.find((ds) => ds.id === dsId);
+      if (!devServer) return;
+
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const currentEnv = this.envList.find((e) => e.id === this.currentEnvId);
+        if (currentEnv) {
+          this._doSwitchProxy(currentEnv, devServer);
+        }
+      });
+    });
   }
 
   _renderEnvItem(env) {
@@ -660,6 +799,12 @@ class EnvmSwitcher {
       actionBtn = `<button class="item-action" data-env-id="${env.id}" ${isSwitching ? "disabled" : ""}>启动</button>`;
     }
 
+    // 当前运行中的环境：渲染 DevServer 代理目标子列表
+    let proxyTargetsHtml = "";
+    if (isCurrent && isRunning && this.devServerList.length > 0) {
+      proxyTargetsHtml = this._renderDevServerTargets(env);
+    }
+
     return /* html */ `
       <div class="env-item ${isCurrent ? "current" : ""} ${isSwitching ? "switching" : ""}"
            data-env-id="${env.id}">
@@ -671,7 +816,37 @@ class EnvmSwitcher {
         <span class="item-port">:${env.port}</span>
         ${actionBtn}
       </div>
+      ${proxyTargetsHtml}
     `;
+  }
+
+  /**
+   * 渲染当前环境下的 DevServer 代理目标子列表
+   * @param {Object} env - 当前环境信息
+   * @returns {string} HTML 字符串
+   */
+  _renderDevServerTargets(env) {
+    return this.devServerList
+      .map((ds) => {
+        const isActive = env.devServerId === ds.id;
+        const dsName = ds.name || ds.devServerUrl || "未命名";
+        const actionBtn = isActive
+          ? '<span class="proxy-target-active">◀</span>'
+          : `<button class="proxy-target-btn" data-ds-id="${ds.id}" ${this.isSwitching ? "disabled" : ""}>切换</button>`;
+
+        return /* html */ `
+          <div class="proxy-target-item ${isActive ? "current" : ""} ${this.isSwitching ? "switching" : ""}"
+               data-ds-id="${ds.id}">
+            <span class="proxy-target-indent"></span>
+            <span class="item-info">
+              <span class="item-name">Dev: ${this._escapeHtml(dsName)}</span>
+              <span class="item-url">${this._escapeHtml(ds.devServerUrl || "")}</span>
+            </span>
+            ${actionBtn}
+          </div>
+        `;
+      })
+      .join("");
   }
 
   // ==================== 事件处理 ====================
@@ -697,7 +872,11 @@ class EnvmSwitcher {
   }
 
   async _refresh() {
-    await Promise.all([this._fetchCurrentEnv(), this._fetchEnvList()]);
+    await Promise.all([
+      this._fetchCurrentEnv(),
+      this._fetchEnvList(),
+      this._fetchDevServerList(),
+    ]);
     this._updateUI();
   }
 
@@ -713,7 +892,7 @@ class EnvmSwitcher {
     const currentEnv = this.envList.find((e) => e.id === this.currentEnvId);
     const isCurrentRunning =
       currentEnv && currentEnv.status === "running" && this.currentEnvId === env.id;
-    const isTargetRunning = env.status === "running";
+    const isSelf = this.currentEnvId === env.id;
 
     // 如果是当前运行中的环境 → 停止
     if (isCurrentRunning) {
@@ -721,13 +900,13 @@ class EnvmSwitcher {
       return;
     }
 
-    // 如果目标环境已在运行 → 直接跳转，无需重新启动
-    if (isTargetRunning) {
-      this._redirectTo(env);
+    // 当前已停止的环境 → 启动（不跳转，因为当前页面就属于它）
+    if (isSelf && env.status === "stopped") {
+      await this._doStart(env);
       return;
     }
 
-    // 目标环境未运行 → 启动后跳转
+    // 切换/启动其他环境 → 统一走 switch 端点，服务端保证目标就绪后返回
     await this._doSwitch(env);
   }
 
@@ -746,16 +925,31 @@ class EnvmSwitcher {
     }
   }
 
+  async _doStart(env) {
+    this.isSwitching = true;
+    this._updateUI();
+
+    try {
+      await this._startEnv(env.id);
+      await this._refresh();
+    } catch (err) {
+      this._showToast(`启动失败: ${err.message}`);
+    } finally {
+      this.isSwitching = false;
+      this._updateUI();
+    }
+  }
+
   async _doSwitch(targetEnv) {
     this.isSwitching = true;
     this._updateUI();
 
     try {
-      // 只启动目标环境，不关闭当前环境
-      await this._startEnv(targetEnv.id);
+      // 调用 switch 端点：服务端原子操作，启动目标环境（不关闭当前环境）
+      const updatedTarget = await this._switchEnv(this.currentEnvId, targetEnv.id);
 
-      // 启动成功后重定向到新环境的代理 URL
-      this._redirectTo(targetEnv);
+      // 使用服务端返回的最新环境信息（含端口号）进行重定向
+      this._redirectTo(updatedTarget || targetEnv);
     } catch (err) {
       this._showToast(`切换失败: ${err.message}`);
       await this._refresh();
@@ -769,6 +963,31 @@ class EnvmSwitcher {
     const currentUrl = new URL(window.location.href);
     const newUrl = `${currentUrl.protocol}//${currentUrl.hostname}:${env.port}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
     window.location.replace(newUrl);
+  }
+
+  /**
+   * 切换当前环境的 DevServer 绑定
+   * 不换端口、不重启代理，仅更新 devServerId
+   * @param {Object} env - 当前环境信息
+   * @param {Object} devServer - 目标 DevServer 信息
+   */
+  async _doSwitchProxy(env, devServer) {
+    if (this.isSwitching) return;
+
+    this.isSwitching = true;
+    this._updateUI();
+
+    try {
+      await this._switchProxy(env.id, devServer.id);
+      await this._refresh();
+      // 代理切换后刷新当前页面，从新 DevServer 加载资源
+      window.location.reload();
+    } catch (err) {
+      this._showToast(`切换代理失败: ${err.message}`);
+    } finally {
+      this.isSwitching = false;
+      this._updateUI();
+    }
   }
 
   // ==================== 辅助方法 ====================

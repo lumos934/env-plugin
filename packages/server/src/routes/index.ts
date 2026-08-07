@@ -1,6 +1,7 @@
 // routes/index.ts
 import express, { Router } from "express";
 import * as libCookie from "cookie";
+import { z } from "zod";
 import { Container } from "../Container.js";
 import { EnvController } from "../controllers/EnvController.js";
 import { DevServerController } from "../controllers/DevServerController.js";
@@ -88,6 +89,15 @@ const createEnvRoutes = (controller: EnvController, importExportController: Impo
       middleware: [toDTO(EnvSwitchSchema)],
       handler: asyncHandler(
         bind(controller, "handleSwitchEnv"),
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/proxy/switch",
+      middleware: [toDTO(z.object({ envId: z.string(), devServerId: z.string() }))],
+      handler: bind(
+        controller,
+        "handleSwitchProxy",
       ) as RouteDefinition["handler"],
     },
     {

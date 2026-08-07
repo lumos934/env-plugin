@@ -330,6 +330,37 @@ class EnvService {
   }
 
   /**
+   * 切换当前环境的 DevServer 绑定
+   * 更新 devServerId 后，PreProxyServer 在下个请求中动态读取，即时生效
+   * @param envId - 当前环境ID
+   * @param devServerId - 目标 DevServer ID
+   * @returns 更新后的环境信息
+   * @throws {AppError} 当环境或 DevServer 不存在时抛出
+   */
+  handleSwitchProxy(envId: string, devServerId: string): EnvModel {
+    envLogger.info({ envId, devServerId }, "准备切换环境代理目标");
+
+    // 校验环境存在
+    const env = this.envRepo.findOneById(envId);
+    if (!env) {
+      throw new AppError(`切换代理失败，环境【${envId}】不存在`);
+    }
+
+    // 校验 DevServer 存在
+    const devServer = this.devServerRepo.findOneById({ id: devServerId });
+    if (!devServer) {
+      throw new AppError(`切换代理失败，DevServer【${devServerId}】不存在`);
+    }
+
+    // 更新 devServerId（PreProxyServer 动态读取，即时生效）
+    this.envRepo.update({ id: envId, devServerId });
+
+    const updatedEnv = this.envRepo.findOneById(envId);
+    envLogger.info({ updatedEnv }, "环境代理目标切换成功");
+    return updatedEnv!;
+  }
+
+  /**
    * 批量更新排序顺序
    * @param sortData - 排序数据
    * @returns {void}
