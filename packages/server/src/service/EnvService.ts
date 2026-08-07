@@ -286,6 +286,50 @@ class EnvService {
   }
 
   /**
+   * 环境切换：启动目标环境（不停止当前环境，允许多环境并行运行）
+   * @param currentEnvId - 当前环境ID（仅用于日志和幂等判断）
+   * @param targetEnvId - 目标环境ID
+   * @returns 目标环境信息（含端口号），供客户端重定向
+   * @throws {AppError} 当环境不存在或操作失败时抛出
+   */
+  async handleSwitchEnv(
+    currentEnvId: string,
+    targetEnvId: string
+  ): Promise<EnvModel> {
+    envLogger.info(
+      { currentEnvId, targetEnvId },
+      "准备切换环境"
+    );
+
+    // 检查目标环境是否存在
+    const targetEnv = this.envRepo.findOneById(targetEnvId);
+    if (!targetEnv) {
+      throw new AppError(`切换失败，目标环境【${targetEnvId}】不存在`);
+    }
+
+    // 如果切换到同一个环境且已在运行，则无需操作
+    if (currentEnvId === targetEnvId && targetEnv.status === "running") {
+      envLogger.info("切换到相同环境且已在运行，无需操作");
+      return targetEnv;
+    }
+
+    // 启动目标环境（如果已在运行则重启以确保状态正确）
+    if (targetEnv.status === "running") {
+      await this.handleStopServer({ id: targetEnvId });
+    }
+    await this.handleStartServer({ id: targetEnvId });
+
+    // 3. 返回目标环境最新信息
+    const updatedTarget = this.envRepo.findOneById(targetEnvId);
+    if (!updatedTarget) {
+      throw new AppError("切换后无法获取目标环境信息");
+    }
+
+    envLogger.info({ updatedTarget }, "环境切换成功");
+    return updatedTarget;
+  }
+
+  /**
    * 批量更新排序顺序
    * @param sortData - 排序数据
    * @returns {void}

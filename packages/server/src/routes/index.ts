@@ -17,6 +17,7 @@ import {
   EnvCreateSchema,
   EnvUpdateSchema,
   EnvSortSchema,
+  EnvSwitchSchema,
   DevServerCreateSchema,
   DevServerDeleteSchema,
   DevServerUpdateSchema,
@@ -32,8 +33,9 @@ import {
 } from "../types/index.js";
 
 // 辅助函数：绑定 Controller 方法，确保 this 指向正确
-const bind = <T, K extends keyof T>(obj: T, method: K) =>
-  (obj[method] as (...args: unknown[]) => unknown).bind(obj);
+const bind = <T extends object, K extends keyof T>(obj: T, method: K) =>
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  (obj[method] as Function).bind(obj) as T[K];
 
 // 1. 创建各模块路由（声明式 RouteDefinition 配置）
 const createEnvRoutes = (controller: EnvController, importExportController: ImportExportController) => {
@@ -78,6 +80,14 @@ const createEnvRoutes = (controller: EnvController, importExportController: Impo
       middleware: [toDTO(EnvPrimarySchema)],
       handler: asyncHandler(
         bind(controller, "handleStopServer"),
+      ) as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/switch",
+      middleware: [toDTO(EnvSwitchSchema)],
+      handler: asyncHandler(
+        bind(controller, "handleSwitchEnv"),
       ) as RouteDefinition["handler"],
     },
     {

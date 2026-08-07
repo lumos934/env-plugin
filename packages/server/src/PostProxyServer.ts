@@ -39,9 +39,14 @@ class PostProxyServer {
     // 静态资源
     app.use(expressStaticGzip(join(__dirname, "client"), {}));
     // 注入资源
+    // 优先从用户自定义目录加载（如 .envm/），找不到时回退到内置 templates/inject/
     app.use(
       "/envm-inject",
-      express.static(join(process.cwd(), this.config.injectScriptDir || ""), {})
+      express.static(join(process.cwd(), this.config.injectScriptDir || ""))
+    );
+    app.use(
+      "/envm-inject",
+      express.static(join(__dirname, "..", "templates", "inject"))
     );
     // 统一处理响应
     app.use(responseEnhancer);

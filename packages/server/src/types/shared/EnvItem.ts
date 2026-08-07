@@ -142,3 +142,17 @@ export type EnvSort = z.infer<typeof EnvSortSchema>;
  * 排序项类型
  */
 export type EnvSortOrder = EnvSort['orders'][number];
+
+/**
+ * 环境切换Schema
+ * 用于切换环境时的参数验证
+ */
+export const EnvSwitchSchema = z.object({
+  currentEnvId: z.string().describe("当前环境ID"),
+  targetEnvId: z.string().describe("目标环境ID"),
+});
+
+/**
+ * 环境切换参数类型
+ */
+export type EnvSwitch = z.infer<typeof EnvSwitchSchema>;

@@ -338,19 +338,24 @@ class PreProxyServer {
           const config = getConfig();
           const scriptDir = config.injectScriptDir;
 
-          if (!scriptDir) {
-            res.end(body);
-            return;
-          }
-
           let html = body.toString("utf8");
 
-          // 读取文件夹下所有 js 文件（排除 # 开头的文件）
-          const scriptTags = this.generateImportScripts(scriptDir);
+          // 读取用户自定义文件夹下所有 js 文件（排除 # 开头的文件）
+          const userScriptTags = scriptDir
+            ? this.generateImportScripts(scriptDir)
+            : "";
+
+          // 始终注入内置的环境快速切换面板脚本
+          const builtInScriptTag =
+            '<script type="module" src="/envm-inject/envm-switcher.js"></script>';
+
+          const allScriptTags = [userScriptTags, builtInScriptTag]
+            .filter(Boolean)
+            .join("\n");
 
           html = html.replace(
             /<\/body>\s*<\/html>/gi,
-            `${scriptTags}</body></html>`
+            `${allScriptTags}</body></html>`
           );
           const newBody = Buffer.from(html, "utf8");
           res.setHeader("Content-Length", newBody.length);

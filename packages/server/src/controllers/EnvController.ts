@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { EnvService } from "../service/EnvService.js";
-import { EnvCreate, EnvDelete, EnvQuery, EnvUpdate, EnvSort } from "../types/index.js";
+import { EnvCreate, EnvDelete, EnvQuery, EnvUpdate, EnvSort, EnvSwitch } from "../types/index.js";
 import { envLogger } from "../utils/logger.js";
 
 /**
@@ -219,6 +219,40 @@ class EnvController {
       res.success({ message: "排序更新成功" });
     } catch (error) {
       envLogger.error(error, "排序更新请求处理失败");
+      next(error);
+    }
+  }
+
+  /**
+   * 切换环境
+   * @description 处理环境切换的POST请求（原子操作：先启动目标，再停止当前）
+   * @param req - Express请求对象，包含待切换的环境ID（在req.dto中）
+   * @param res - Express响应对象，用于返回目标环境信息
+   * @param next - Express下一步中间件函数，用于错误处理
+   */
+  async handleSwitchEnv(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { currentEnvId, targetEnvId } = req.dto as EnvSwitch;
+      envLogger.info(
+        { currentEnvId, targetEnvId },
+        "接收环境切换请求"
+      );
+
+      const targetEnv = await this.envService.handleSwitchEnv(
+        currentEnvId,
+        targetEnvId
+      );
+
+      res.success({
+        message: "环境切换成功",
+        data: targetEnv,
+      });
+    } catch (error) {
+      envLogger.error(error, "环境切换请求处理失败");
       next(error);
     }
   }
