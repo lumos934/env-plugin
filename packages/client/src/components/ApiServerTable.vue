@@ -1,8 +1,10 @@
 <script lang="ts" setup>
 import { ElMessage, ElMessageBox, ElBadge } from 'element-plus'
-import { onMounted, ref } from 'vue'
-import type { DevServerModel, EnvModel, ListResponse } from '@envm/schemas'
+import { ref, watch } from 'vue'
+import type { EnvModel } from '@envm/schemas'
 import { apiPrefix, fetchData } from '@/utils'
+import { useEnvList } from '@/composables/useEnvList'
+import { useDevServerList } from '@/composables/useDevServerList'
 import ApiServerEdit from './ApiServerEdit.vue'
 import RouteRuleDialog from './RouteRuleDialog.vue'
 import PasswordDialog from './PasswordDialog.vue'
@@ -23,55 +25,33 @@ interface EnvModelWithRouteCount extends EnvModel {
   routeRuleCount?: number
 }
 
+// 共享数据源
+const { list: _envList, loading: envLoading, refresh: refreshEnvList } = useEnvList()
+const { list: devServerList } = useDevServerList()
+
+// 本地可变副本（用于拖拽排序）+ 展示字段 index
 const tableData = ref<EnvModelWithRouteCount[]>([])
 
-const devServerList = ref<DevServerModel[]>([])
-
-const refreshLoading = ref(false)
-
-/**
- * 获取环境列表
- *
- */
-const getEnvList = () => {
-  refreshLoading.value = true
-  return fetchData<ListResponse<EnvModel>>(`${apiPrefix}/env/getlist`)
-    .then((res) => {
-      tableData.value =
-        res?.list.map((item) => {
-          return {
-            ...item,
-            index: `${location.protocol}//${location.hostname}:${item.port}${item.homePage}`,
-          }
-        }) ?? []
-    })
-    .finally(() => {
-      refreshLoading.value = false
-    })
-}
-/**
- * 获取开发服务器列表
- *
- */
-const getDevServerList = () => {
-  return fetchData<ListResponse<DevServerModel>>(`${apiPrefix}/server/list`).then((res) => {
-    devServerList.value = res?.list || []
-  })
-}
+watch(
+  _envList,
+  (newList) => {
+    tableData.value = newList.map((item) => ({
+      ...item,
+      index: `${location.protocol}//${location.hostname}:${item.port}${item.homePage}`,
+    }))
+  },
+  { immediate: true },
+)
 
 /**
  * 刷新数据
  */
 const refresh = () => {
-  return Promise.all([getEnvList(), getDevServerList()])
+  return refreshEnvList()
 }
 
 defineExpose({
   refresh,
-})
-
-onMounted(() => {
-  refresh()
 })
 
 const handleStart = (rowData: EnvModel) => {
@@ -113,7 +93,7 @@ const handleDelete = (rowData: EnvModel) => {
         params: rowData,
       }).then(() => {
         ElMessage.success('删除成功')
-        getEnvList()
+        refreshEnvList()
       })
     })
     .catch(() => {
@@ -127,18 +107,13 @@ const handleDelete = (rowData: EnvModel) => {
  * @param rowData
  */
 const updateStatus = (action: string, rowData: EnvModel) => {
-  refreshLoading.value = true
-
   fetchData({
     url: `${apiPrefix}/env/${action}`,
     data: rowData,
   })
     .then(() => {
-      getEnvList()
+      refreshEnvList()
       ElMessage.success('操作成功')
-    })
-    .finally(() => {
-      refreshLoading.value = false
     })
 }
 
@@ -156,7 +131,7 @@ const updateSelectedDevServer = (devServerId: string, rowData: EnvModel) => {
     },
   }).then(() => {
     ElMessage.success('更新成功')
-    getEnvList()
+    refreshEnvList()
   })
 }
 import { useClipboard } from '@vueuse/core'
@@ -228,7 +203,7 @@ const saveSortOrder = (list: EnvModelWithRouteCount[]) => {
     .then(() => ElMessage.success('排序保存成功'))
     .catch(() => {
       ElMessage.error('排序保存失败')
-      getEnvList()
+      refreshEnvList()
     })
 }
 // ====================== 拖拽排序结束 ======================
@@ -243,7 +218,7 @@ const saveSortOrder = (list: EnvModelWithRouteCount[]) => {
     <el-table
       :data="tableData"
       style="width: 100%"
-      v-loading="refreshLoading"
+      v-loading="envLoading"
       stripe
       row-key="id"
     >

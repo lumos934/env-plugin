@@ -5,6 +5,8 @@ import ApiServerTable from './ApiServerTable.vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { apiPrefix, fetchData } from '@/utils'
+import { useEnvList } from '@/composables/useEnvList'
+import { useDevServerList } from '@/composables/useDevServerList'
 import DevServerTable from './DevServerTable.vue'
 import RequestLogTable from './RequestLogTable.vue'
 import type { RequestLogEntry } from '@envm/schemas'
@@ -32,22 +34,22 @@ onMounted(() => {
   startWs()
 })
 
-const apiServerTableRef = ref()
-const devServerTableRef = ref()
-
 // 请求日志状态（客户端镜像 500 条上限）
 const requestLogs = ref<RequestLogEntry[]>([])
 const MAX_LOG_ENTRIES = 500
+
+// 共享数据源的刷新方法
+const { refresh: refreshEnvList } = useEnvList()
+const { refresh: refreshDevServerList } = useDevServerList()
+
 /**
  * 刷新表格
  */
 const refreshList = () => {
   refreshLoading.value = true
-  Promise.all([apiServerTableRef.value?.refresh(), devServerTableRef.value?.refresh()]).finally(
-    () => {
-      refreshLoading.value = false
-    },
-  )
+  Promise.all([refreshEnvList(), refreshDevServerList()]).finally(() => {
+    refreshLoading.value = false
+  })
 }
 
 /**
@@ -55,9 +57,9 @@ const refreshList = () => {
  */
 const refreshTable = (tab: { props: { name: string } }) => {
   if (tab.props.name === 'api-server') {
-    apiServerTableRef.value?.refresh()
+    refreshEnvList()
   } else if (tab.props.name === 'dev-server') {
-    devServerTableRef.value?.refresh()
+    refreshDevServerList()
   } else if (tab.props.name === 'request-log') {
     // 请求日志是实时推送的，无需刷新
   }
@@ -171,13 +173,13 @@ const startWs = () => {
       label="API Server"
       name="api-server"
     >
-      <api-server-table ref="apiServerTableRef"></api-server-table>
+      <api-server-table></api-server-table>
     </el-tab-pane>
     <el-tab-pane
       label="Dev Server"
       name="dev-server"
     >
-      <dev-server-table ref="devServerTableRef"></dev-server-table>
+      <dev-server-table></dev-server-table>
     </el-tab-pane>
     <el-tab-pane
       label="请求日志"

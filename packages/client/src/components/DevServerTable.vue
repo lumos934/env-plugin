@@ -1,31 +1,16 @@
 <script setup lang="ts">
 import { apiPrefix, fetchData } from '@/utils'
-import type { DevServerModel, ListResponse } from '@envm/schemas'
+import type { DevServerModel } from '@envm/schemas'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import DevServerEdit from './DevServerEdit.vue'
 import { DocumentCopy, Edit, Delete } from '@element-plus/icons-vue'
 import { VueDraggable } from 'vue-draggable-plus'
+import { useDevServerList } from '@/composables/useDevServerList'
 
-const devServerList = ref<DevServerModel[]>([])
-const refreshLoading = ref(false)
+const { list: devServerList, loading: devServerLoading, refresh } = useDevServerList()
 
 const devServerEditRef = ref()
-/**
- * 获取开发服务器列表
- *
- */
-const getDevServerList = () => {
-  refreshLoading.value = true
-  return fetchData<ListResponse<DevServerModel>>(`${apiPrefix}/server/list`)
-    .then((res) => {
-      devServerList.value = res?.list || []
-    })
-    .finally(() => {
-      refreshLoading.value = false
-    })
-}
-
 /**
  * 删除数据
  * @param rowData
@@ -43,7 +28,7 @@ const handleDelete = (rowData: DevServerModel) => {
         params: rowData,
       }).then(() => {
         ElMessage.success('删除成功')
-        getDevServerList()
+        refresh()
       })
     })
     .catch(() => {
@@ -71,7 +56,7 @@ const saveSortOrder = (list: DevServerModel[]) => {
     .then(() => ElMessage.success('排序保存成功'))
     .catch(() => {
       ElMessage.error('排序保存失败')
-      getDevServerList()
+      refresh()
     })
 }
 // ====================== 拖拽修复结束 ======================
@@ -85,16 +70,10 @@ const handleCopy = (rowData: DevServerModel) => {
   newServer.name = `${newServer.name}-副本`
   devServerEditRef.value.showDialog(newServer, true)
 }
-onMounted(() => {
-  getDevServerList()
-})
-
-const refresh = () => {
-  return getDevServerList()
-}
 defineExpose({
   refresh,
 })
+
 </script>
 <template>
   <VueDraggable
@@ -108,7 +87,7 @@ defineExpose({
       style="width: 100%"
       stripe
       row-key="id"
-      v-loading="refreshLoading"
+      v-loading="devServerLoading"
     >
       <el-table-column
         prop="name"

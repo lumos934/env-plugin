@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MainTable from './components/MainPage.vue'
+import MainPage from './components/MainPage.vue'
 </script>
 
 <template>
@@ -15,7 +15,7 @@ import MainTable from './components/MainPage.vue'
   </header>
   <br />
   <main>
-    <MainTable />
+    <MainPage />
   </main>
 </template>
 

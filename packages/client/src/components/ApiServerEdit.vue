@@ -2,7 +2,8 @@
 import { ref, reactive, nextTick } from 'vue'
 import { ElForm, type FormItemRule, ElMessage } from 'element-plus'
 import { apiPrefix, fetchData } from '@/utils'
-import type { DevServerModel, EnvModel, ListResponse } from '@envm/schemas'
+import type { EnvModel } from '@envm/schemas'
+import { useDevServerList } from '@/composables/useDevServerList'
 
 const emit = defineEmits<{
   (e: 'refreshList'): void
@@ -15,7 +16,6 @@ const currentId = ref('')
 // 显示对话框，支持新增和编辑模式
 const showDialog = (envItem?: EnvModel,isCopy:boolean = false) => {
   visible.value = true
-  getDevServerList()
 
   // 如果有传入数据，则进入编辑模式
   if (envItem && !isCopy) {
@@ -133,17 +133,7 @@ const submitForm = () => {
   })
 }
 
-const devServerOptions = ref<DevServerModel[]>([])
-// 获取开发服务器列表
-const getDevServerList = () => {
-  fetchData<ListResponse<DevServerModel>>(`${apiPrefix}/server/list`)
-    .then((data) => {
-      devServerOptions.value = data?.list ?? []
-    })
-    .catch(() => {
-      ElMessage.error('获取服务器列表失败')
-    })
-}
+const devServerOptions = useDevServerList().list
 </script>
 <template>
   <el-dialog
