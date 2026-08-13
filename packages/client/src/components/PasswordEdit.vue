@@ -2,19 +2,8 @@
 import { ref, reactive } from 'vue'
 import { type FormItemRule, ElMessage } from 'element-plus'
 import { passwordApi } from '@/api'
+import type { PasswordModel } from '@envm/schemas'
 import { useFormDialog } from '@/composables/useFormDialog'
-
-interface PasswordModel {
-  id?: string
-  envId: string
-  name: string
-  username: string
-  password: string
-  description?: string
-  isDefault?: boolean
-  createdAt?: string
-  updatedAt?: string
-}
 
 const emit = defineEmits<{
   (e: 'refreshList'): void

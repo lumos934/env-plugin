@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick } from 'vue'
-import { VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { VideoPause, VideoPlay, Delete } from '@element-plus/icons-vue'
 import type { RequestLogEntry } from '@envm/schemas'
 
 const props = defineProps<{
   logs: RequestLogEntry[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'clear'): void
 }>()
 
 const filterUrl = ref('')
@@ -76,8 +80,7 @@ const formatTime = (timestamp: number) => {
 }
 
 const handleClear = () => {
-  // 清空日志（通过修改 props 不会生效，由父组件处理）
-  props.logs.length = 0
+  emit('clear')
 }
 </script>
 
@@ -107,6 +110,14 @@ const handleClear = () => {
         @click="togglePause"
       >
         {{ isPaused ? '继续' : '暂停' }}
+      </el-button>
+      <el-button
+        type="danger"
+        :icon="Delete"
+        size="small"
+        @click="handleClear"
+      >
+        清空
       </el-button>
       <el-text type="info" size="small">
         {{

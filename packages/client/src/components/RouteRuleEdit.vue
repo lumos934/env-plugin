@@ -2,18 +2,8 @@
 import { ref, reactive } from 'vue'
 import { type FormItemRule, ElMessage } from 'element-plus'
 import { envApi, routeRuleApi } from '@/api'
-import type { EnvModel } from '@envm/schemas'
+import type { EnvModel, RouteRuleModel } from '@envm/schemas'
 import { useFormDialog } from '@/composables/useFormDialog'
-
-interface RouteRuleModel {
-  id?: string
-  envId: string
-  pathPrefix: string
-  targetEnvId: string
-  description?: string
-  createdAt?: string
-  updatedAt?: string
-}
 
 const emit = defineEmits<{
   (e: 'refreshList'): void

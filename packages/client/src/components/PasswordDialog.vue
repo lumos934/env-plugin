@@ -2,20 +2,9 @@
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { passwordApi } from '@/api'
+import type { PasswordModel } from '@envm/schemas'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import PasswordEdit from './PasswordEdit.vue'
-
-interface PasswordModel {
-  id: string
-  envId: string
-  name: string
-  username: string
-  password: string
-  description?: string
-  isDefault?: boolean
-  createdAt?: string
-  updatedAt?: string
-}
 
 const props = defineProps<{
   envId: string

@@ -54,6 +54,10 @@ onMounted(() => {
 const requestLogs = ref<RequestLogEntry[]>([])
 const MAX_LOG_ENTRIES = 500
 
+const clearRequestLogs = () => {
+  requestLogs.value = []
+}
+
 // 共享数据源的刷新方法
 const { refresh: refreshEnvList } = useEnvList()
 const { refresh: refreshDevServerList } = useDevServerList()
@@ -217,7 +221,7 @@ const startWs = () => {
       label="请求日志"
       name="request-log"
     >
-      <request-log-table :logs="requestLogs" />
+      <request-log-table :logs="requestLogs" @clear="clearRequestLogs" />
     </el-tab-pane>
   </el-tabs>
 

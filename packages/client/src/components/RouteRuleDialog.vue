@@ -2,19 +2,9 @@
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { routeRuleApi } from '@/api'
+import type { RouteRuleModel } from '@envm/schemas'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import RouteRuleEdit from './RouteRuleEdit.vue'
-
-interface RouteRuleModel {
-  id: string
-  envId: string
-  enabled: boolean
-  pathPrefix: string
-  targetEnvId?: string
-  description?: string
-  createdAt?: string
-  updatedAt?: string
-}
 
 const props = defineProps<{
   envId: string
