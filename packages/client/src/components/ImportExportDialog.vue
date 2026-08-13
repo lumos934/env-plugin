@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Upload } from '@element-plus/icons-vue'
-import { apiPrefix, fetchData } from '@/utils'
+import { envApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
 import type { EnvModel, ExportData, ImportResult } from '@envm/schemas'
@@ -100,13 +100,9 @@ async function handleExport() {
 
   exportLoading.value = true
   try {
-    const res = await fetchData({
-      url: `${apiPrefix}/env/export`,
-      method: 'POST',
-      params: {
-        envIds: selectedEnvIds.value,
-        encryptPassword: enableEncryption.value ? encryptPassword.value : undefined,
-      },
+    const res = await envApi.export({
+      envIds: selectedEnvIds.value,
+      encryptPassword: enableEncryption.value ? encryptPassword.value : undefined,
     })
     // 触发浏览器下载
     const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' })
@@ -229,14 +225,10 @@ async function handleImport() {
 
   importLoading.value = true
   try {
-    const res = await fetchData({
-      url: `${apiPrefix}/env/import`,
-      method: 'POST',
-      params: {
-        data: uploadedData.value,
-        conflictStrategy: conflictStrategy.value,
-        decryptPassword: conflictSummary.value?.encrypted ? importPassword.value : undefined,
-      },
+    const res = await envApi.import({
+      data: uploadedData.value,
+      conflictStrategy: conflictStrategy.value,
+      decryptPassword: conflictSummary.value?.encrypted ? importPassword.value : undefined,
     })
     importResult.value = res
     ElMessage.success('导入完成')

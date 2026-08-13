@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref, reactive } from 'vue'
 import { type FormItemRule, ElMessage } from 'element-plus'
-import { apiPrefix, fetchData } from '@/utils'
-import type { EnvModel, ListResponse } from '@envm/schemas'
+import { envApi, routeRuleApi } from '@/api'
+import type { EnvModel } from '@envm/schemas'
 import { useFormDialog } from '@/composables/useFormDialog'
 
 interface RouteRuleModel {
@@ -40,17 +40,10 @@ const {
 } = useFormDialog({
   defaultFormData,
   async onSubmit(data, mode, id) {
-    if (mode === 'edit') {
-      await fetchData({
-        url: `${apiPrefix}/route-rule/update`,
-        params: { id, ...data },
-      })
+    if (mode === 'edit' && id) {
+      await routeRuleApi.update({ id, ...data })
     } else {
-      await fetchData({
-        url: `${apiPrefix}/route-rule/add`,
-        method: 'POST',
-        params: data,
-      })
+      await routeRuleApi.add(data)
     }
     ElMessage.success(mode === 'edit' ? '更新成功' : '新增成功')
     closeDialog()
@@ -92,7 +85,7 @@ const rules = reactive<Partial<Record<string, FormItemRule[]>>>({
 // 环境列表（用于选择目标环境，过滤掉自身）
 const envOptions = ref<EnvModel[]>([])
 function getEnvList() {
-  fetchData<ListResponse<EnvModel>>(`${apiPrefix}/env/getlist`)
+  envApi.getList()
     .then((data) => {
       const currentId = currentEnvId.value
       envOptions.value = (data?.list ?? []).filter((env) => !currentId || env.id !== currentId)

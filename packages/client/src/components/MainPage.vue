@@ -4,7 +4,8 @@ import DevServerEdit from './DevServerEdit.vue'
 import ApiServerTable from './ApiServerTable.vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
-import { apiPrefix, fetchData } from '@/utils'
+import { apiPrefix } from '@/utils'
+import { commonApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
 import DevServerTable from './DevServerTable.vue'
@@ -84,7 +85,7 @@ const refreshTable = (tab: { props: { name: string } }) => {
  * 清楚代理cookie
  */
 const clearProxyCookies = () => {
-  fetchData(`${apiPrefix}/clear-proxy-cookie`).then(() => {
+  commonApi.clearProxyCookies().then(() => {
     ElMessage.success('操作成功')
   })
 }

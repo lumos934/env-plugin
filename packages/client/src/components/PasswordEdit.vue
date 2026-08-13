@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive } from 'vue'
 import { type FormItemRule, ElMessage } from 'element-plus'
-import { apiPrefix, fetchData } from '@/utils'
+import { passwordApi } from '@/api'
 import { useFormDialog } from '@/composables/useFormDialog'
 
 interface PasswordModel {
@@ -35,17 +35,10 @@ const { visible, isEditMode, submitting, formData, showDialog: _showDialog, clos
   useFormDialog({
     defaultFormData,
     async onSubmit(data, mode, id) {
-      if (mode === 'edit') {
-        await fetchData({
-          url: `${apiPrefix}/password/update`,
-          params: { id, ...data },
-        })
+      if (mode === 'edit' && id) {
+        await passwordApi.update({ id, ...data })
       } else {
-        await fetchData({
-          url: `${apiPrefix}/password/add`,
-          method: 'POST',
-          params: data,
-        })
+        await passwordApi.add(data)
       }
       ElMessage.success(mode === 'edit' ? '更新成功' : '新增成功')
       closeDialog()

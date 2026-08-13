@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiPrefix, fetchData } from '@/utils'
+import { devServerApi } from '@/api'
 import type { DevServerModel } from '@envm/schemas'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ref } from 'vue'
@@ -22,11 +22,7 @@ const handleDelete = (rowData: DevServerModel) => {
     type: 'warning',
   })
     .then(() => {
-      return fetchData({
-        url: `${apiPrefix}/server`,
-        method: 'DELETE',
-        params: rowData,
-      }).then(() => {
+      return devServerApi.delete(rowData.id).then(() => {
         ElMessage.success('删除成功')
         refresh()
       })
@@ -48,11 +44,7 @@ const saveSortOrder = (list: DevServerModel[]) => {
     id: item.id,
     sortOrder: index,
   }))
-  fetchData({
-    url: `${apiPrefix}/server/sort`,
-    method: 'PUT',
-    data: { orders },
-  })
+  devServerApi.sort(orders)
     .then(() => ElMessage.success('排序保存成功'))
     .catch(() => {
       ElMessage.error('排序保存失败')

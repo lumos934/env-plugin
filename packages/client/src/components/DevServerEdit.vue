@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { reactive } from 'vue'
 import { type FormItemRule, ElMessage } from 'element-plus'
-import { apiPrefix, fetchData } from '@/utils'
+import { devServerApi } from '@/api'
 import { useFormDialog } from '@/composables/useFormDialog'
 
 const emit = defineEmits<{
@@ -28,18 +28,10 @@ const {
   async onSubmit(data, mode, id) {
     // name 为空时回退到 devServerUrl
     const submitData = { ...data, name: data.name || data.devServerUrl }
-    if (mode === 'edit') {
-      await fetchData({
-        url: `${apiPrefix}/server/update`,
-        method: 'PUT',
-        data: { id, ...submitData },
-      })
+    if (mode === 'edit' && id) {
+      await devServerApi.update({ id, ...submitData })
     } else {
-      await fetchData({
-        url: `${apiPrefix}/server/add`,
-        method: 'POST',
-        data: submitData,
-      })
+      await devServerApi.add(submitData)
     }
     ElMessage.success(mode === 'edit' ? '更新成功' : '新增成功')
     closeDialog()

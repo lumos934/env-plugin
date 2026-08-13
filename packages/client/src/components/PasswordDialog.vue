@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { apiPrefix, fetchData } from '@/utils'
+import { passwordApi } from '@/api'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import PasswordEdit from './PasswordEdit.vue'
 
@@ -52,7 +52,7 @@ defineExpose({
 // 获取密码列表
 const loadPasswords = () => {
   loading.value = true
-  fetchData<{ list: PasswordModel[] }>(`${apiPrefix}/password/list/${currentEnvId.value}`)
+  passwordApi.list(currentEnvId.value)
     .then((data) => {
       tableData.value = data?.list ?? []
     })
@@ -82,11 +82,7 @@ const handleDelete = (row: PasswordModel) => {
     type: 'warning',
   })
     .then(() => {
-      return fetchData({
-        url: `${apiPrefix}/password/delete`,
-        method: 'POST',
-        params: { id: row.id },
-      }).then(() => {
+      return passwordApi.delete(row.id).then(() => {
         ElMessage.success('删除成功')
         loadPasswords()
       })
@@ -99,14 +95,7 @@ const handleDelete = (row: PasswordModel) => {
 // 设置默认密码
 const handleSetDefault = async (row: PasswordModel) => {
   try {
-    await fetchData({
-      url: `${apiPrefix}/password/update`,
-      method: 'POST',
-      params: {
-        id: row.id,
-        isDefault: true,
-      },
-    })
+    await passwordApi.update({ id: row.id, isDefault: true })
     ElMessage.success('已设为默认密码')
     loadPasswords()
   } catch (error) {

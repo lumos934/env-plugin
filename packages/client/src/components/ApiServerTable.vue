@@ -2,7 +2,7 @@
 import { ElMessage, ElMessageBox, ElBadge } from 'element-plus'
 import { ref, watch } from 'vue'
 import type { EnvModel } from '@envm/schemas'
-import { apiPrefix, fetchData } from '@/utils'
+import { envApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
 import ApiServerEdit from './ApiServerEdit.vue'
@@ -19,6 +19,7 @@ import {
   Key,
   CopyDocument,
 } from '@element-plus/icons-vue'
+import { useClipboard } from '@vueuse/core'
 
 // 扩展 EnvModel 类型以包含路由规则数量
 interface EnvModelWithRouteCount extends EnvModel {
@@ -87,11 +88,7 @@ const handleDelete = (rowData: EnvModel) => {
     type: 'warning',
   })
     .then(() => {
-      return fetchData({
-        url: `${apiPrefix}/env/delete`,
-        method: 'POST',
-        params: rowData,
-      }).then(() => {
+      return envApi.delete(rowData.id).then(() => {
         ElMessage.success('删除成功')
         refreshEnvList()
       })
@@ -106,15 +103,12 @@ const handleDelete = (rowData: EnvModel) => {
  * @param action
  * @param rowData
  */
-const updateStatus = (action: string, rowData: EnvModel) => {
-  fetchData({
-    url: `${apiPrefix}/env/${action}`,
-    data: rowData,
+const updateStatus = (action: 'start' | 'stop', rowData: EnvModel) => {
+  const request = action === 'start' ? envApi.start(rowData.id) : envApi.stop(rowData.id)
+  request.then(() => {
+    refreshEnvList()
+    ElMessage.success('操作成功')
   })
-    .then(() => {
-      refreshEnvList()
-      ElMessage.success('操作成功')
-    })
 }
 
 /**
@@ -123,18 +117,11 @@ const updateStatus = (action: string, rowData: EnvModel) => {
  * @param rowData
  */
 const updateSelectedDevServer = (devServerId: string, rowData: EnvModel) => {
-  fetchData({
-    url: `${apiPrefix}/env/update`,
-    data: {
-      id: rowData.id,
-      devServerId,
-    },
-  }).then(() => {
+  envApi.update({ id: rowData.id, devServerId }).then(() => {
     ElMessage.success('更新成功')
     refreshEnvList()
   })
 }
-import { useClipboard } from '@vueuse/core'
 const { copy, isSupported } = useClipboard()
 /**
  * 拷贝APIurl
@@ -195,11 +182,7 @@ const saveSortOrder = (list: EnvModelWithRouteCount[]) => {
     id: item.id,
     sortOrder: index,
   }))
-  fetchData({
-    url: `${apiPrefix}/env/sort`,
-    method: 'PUT',
-    data: { orders },
-  })
+  envApi.sort(orders)
     .then(() => ElMessage.success('排序保存成功'))
     .catch(() => {
       ElMessage.error('排序保存失败')

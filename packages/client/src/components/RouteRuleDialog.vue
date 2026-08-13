@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { apiPrefix, fetchData } from '@/utils'
+import { routeRuleApi } from '@/api'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import RouteRuleEdit from './RouteRuleEdit.vue'
 
@@ -10,7 +10,7 @@ interface RouteRuleModel {
   envId: string
   enabled: boolean
   pathPrefix: string
-  targetEnvId: string
+  targetEnvId?: string
   description?: string
   createdAt?: string
   updatedAt?: string
@@ -52,7 +52,7 @@ defineExpose({
 // 获取路由规则列表
 const loadRouteRules = () => {
   loading.value = true
-  fetchData<{ list: RouteRuleModel[] }>(`${apiPrefix}/route-rule/list/${currentEnvId.value}`)
+  routeRuleApi.list(currentEnvId.value)
     .then((data) => {
       tableData.value = data?.list ?? []
     })
@@ -82,11 +82,7 @@ const handleDelete = (row: RouteRuleModel) => {
     type: 'warning',
   })
     .then(() => {
-      return fetchData({
-        url: `${apiPrefix}/route-rule/delete`,
-        method: 'POST',
-        params: { id: row.id },
-      }).then(() => {
+      return routeRuleApi.delete(row.id).then(() => {
         ElMessage.success('删除成功')
         loadRouteRules()
       })
@@ -100,14 +96,7 @@ const handleDelete = (row: RouteRuleModel) => {
 const handleToggleEnabled = async (row: RouteRuleModel) => {
   switchLoading.value[row.id!] = true
   try {
-    await fetchData({
-      url: `${apiPrefix}/route-rule/update`,
-      method: 'POST',
-      params: {
-        id: row.id,
-        enabled: row.enabled,
-      },
-    })
+    await routeRuleApi.update({ id: row.id, enabled: row.enabled })
     ElMessage.success(row.enabled ? '已启用' : '已禁用')
   } catch {
     // 回滚状态
