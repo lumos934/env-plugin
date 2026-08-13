@@ -132,11 +132,8 @@ const importPassword = ref('')
 const importLoading = ref(false)
 const importResult = ref<ImportResult | null>(null)
 
-function handleFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
-
+/** 解析导入文件并填充上传数据 */
+function processFile(file: File) {
   fileName.value = file.name
   importResult.value = null
 
@@ -156,54 +153,84 @@ function handleFileSelect(event: Event) {
     }
   }
   reader.readAsText(file)
+}
+
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  processFile(file)
   // 重置 input 以允许重新选择相同文件
   target.value = ''
 }
 
+/** 冲突预览项（DevServer） */
+interface ConflictDevServerItem {
+  name: string
+  devServerUrl: string
+  conflict: boolean
+  existingName?: string
+}
+
+/** 冲突预览项（环境） */
+interface ConflictEnvItem {
+  apiBaseUrl: string
+  name?: string
+  port: number
+  conflict: boolean
+  existingName?: string
+}
+
+/** 冲突预览汇总 */
+interface ConflictSummary {
+  devServers: ConflictDevServerItem[]
+  envs: ConflictEnvItem[]
+  encrypted: boolean
+}
+
 /** 计算冲突预览 */
-const conflictSummary = computed(() => {
+const conflictSummary = computed<ConflictSummary | null>(() => {
   if (!uploadedData.value) return null
 
   const currentDevServerUrls = new Set(devServerList.value.map((d) => d.devServerUrl))
   const currentApiBaseUrls = new Set(envList.value.map((e) => e.apiBaseUrl))
 
-  const dsList = (uploadedData.value.devServers || []).map(
-    (ds: { name: string; devServerUrl: string }) => ({
-      ...ds,
-      conflict: currentDevServerUrls.has(ds.devServerUrl),
-      existingName: currentDevServerUrls.has(ds.devServerUrl)
-        ? devServerList.value.find((d) => d.devServerUrl === ds.devServerUrl)?.name
-        : undefined,
-    }),
-  )
+  const devServers: ConflictDevServerItem[] = (uploadedData.value.devServers || []).map((ds) => ({
+    ...ds,
+    conflict: currentDevServerUrls.has(ds.devServerUrl),
+    existingName: currentDevServerUrls.has(ds.devServerUrl)
+      ? devServerList.value.find((d) => d.devServerUrl === ds.devServerUrl)?.name
+      : undefined,
+  }))
 
-  const envList2 = (uploadedData.value.envs || []).map(
-    (e: { apiBaseUrl: string; name?: string; port: number }) => ({
-      ...e,
-      conflict: currentApiBaseUrls.has(e.apiBaseUrl),
-      existingName: currentApiBaseUrls.has(e.apiBaseUrl)
-        ? envList.value.find((env) => env.apiBaseUrl === e.apiBaseUrl)?.name
-        : undefined,
-    }),
-  )
+  const envs: ConflictEnvItem[] = (uploadedData.value.envs || []).map((e) => ({
+    ...e,
+    conflict: currentApiBaseUrls.has(e.apiBaseUrl),
+    existingName: currentApiBaseUrls.has(e.apiBaseUrl)
+      ? envList.value.find((env) => env.apiBaseUrl === e.apiBaseUrl)?.name
+      : undefined,
+  }))
 
   return {
-    devServers: dsList,
-    envs: envList2,
+    devServers,
+    envs,
     encrypted: uploadedData.value.encrypted ?? false,
   }
 })
 
 /** 冲突的环境数 */
 const conflictEnvCount = computed(
-  () =>
-    conflictSummary.value?.envs.filter((e: { conflict: boolean }) => e.conflict).length ?? 0,
+  () => conflictSummary.value?.envs.filter((e) => e.conflict).length ?? 0,
+)
+
+/** 冲突的 DevServer 数 */
+const conflictDevServerCount = computed(
+  () => conflictSummary.value?.devServers.filter((d) => d.conflict).length ?? 0,
 )
 
 /** 新建的环境数 */
 const newEnvCount = computed(
-  () =>
-    conflictSummary.value?.envs.filter((e: { conflict: boolean }) => !e.conflict).length ?? 0,
+  () => conflictSummary.value?.envs.filter((e) => !e.conflict).length ?? 0,
 )
 
 /** 文件输入 ref */
@@ -230,7 +257,7 @@ async function handleImport() {
       conflictStrategy: conflictStrategy.value,
       decryptPassword: conflictSummary.value?.encrypted ? importPassword.value : undefined,
     })
-    importResult.value = res
+    importResult.value = res ?? null
     ElMessage.success('导入完成')
     refreshEnvList()
     emit('refreshList')
@@ -315,7 +342,7 @@ function handleClose() {
         @drop.prevent="
           (e) => {
             const file = (e as DragEvent).dataTransfer?.files?.[0]
-            if (file) handleFileSelect({ target: { files: [file] } } as any)
+            if (file) processFile(file)
           }
         "
       >
@@ -411,10 +438,10 @@ function handleClose() {
         </el-table>
 
         <!-- 冲突处理策略 -->
-        <div v-if="conflictEnvCount > 0 || conflictSummary.devServers.some((d: any) => d.conflict)" style="margin-bottom: 12px">
+        <div v-if="conflictEnvCount > 0 || conflictDevServerCount > 0" style="margin-bottom: 12px">
           <p style="margin-bottom: 8px">
             检测到
-            <strong>{{ conflictEnvCount + conflictSummary.devServers.filter((d: any) => d.conflict).length }}</strong>
+            <strong>{{ conflictEnvCount + conflictDevServerCount }}</strong>
             个冲突项（{{ newEnvCount }} 个新建，{{ conflictEnvCount }} 个环境冲突），请选择处理方式：
           </p>
           <el-radio-group v-model="conflictStrategy">

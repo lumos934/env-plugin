@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ElMessage, ElMessageBox, ElBadge } from 'element-plus'
-import { ref, watch } from 'vue'
-import type { EnvModel } from '@envm/schemas'
+import { ref, computed } from 'vue'
+import type { EnvModel, EnvModelWithRouteCount } from '@envm/schemas'
 import { envApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
@@ -21,28 +21,27 @@ import {
 } from '@element-plus/icons-vue'
 import { useClipboard } from '@vueuse/core'
 
-// 扩展 EnvModel 类型以包含路由规则数量
-interface EnvModelWithRouteCount extends EnvModel {
-  routeRuleCount?: number
+// 表格展示项：环境模型 + 首页地址（派生字段）
+interface EnvTableItem extends EnvModelWithRouteCount {
+  index: string
 }
 
 // 共享数据源
 const { list: _envList, loading: envLoading, refresh: refreshEnvList } = useEnvList()
 const { list: devServerList } = useDevServerList()
 
-// 本地可变副本（用于拖拽排序）+ 展示字段 index
-const tableData = ref<EnvModelWithRouteCount[]>([])
-
-watch(
-  _envList,
-  (newList) => {
-    tableData.value = newList.map((item) => ({
+// 展示列表：从共享 list 派生首页地址；setter 支撑拖拽排序写回共享 list
+const tableData = computed<EnvTableItem[]>({
+  get: () =>
+    _envList.value.map((item) => ({
       ...item,
       index: `${location.protocol}//${location.hostname}:${item.port}${item.homePage}`,
-    }))
+    })),
+  set: (value) => {
+    // 拖拽排序写回共享 list；index 是派生字段，会在下次 get 时重新计算覆盖
+    _envList.value = value
   },
-  { immediate: true },
-)
+})
 
 /**
  * 刷新数据
@@ -112,13 +111,13 @@ const updateStatus = (action: 'start' | 'stop', rowData: EnvModel) => {
 }
 
 /**
- * 更新绑定的开发服务器
+ * 切换绑定的开发服务器（代理目标），即时生效
  * @param devServerId
  * @param rowData
  */
 const updateSelectedDevServer = (devServerId: string, rowData: EnvModel) => {
-  envApi.update({ id: rowData.id, devServerId }).then(() => {
-    ElMessage.success('更新成功')
+  envApi.switchProxy(rowData.id, devServerId).then(() => {
+    ElMessage.success('切换成功')
     refreshEnvList()
   })
 }

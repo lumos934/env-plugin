@@ -20,8 +20,11 @@ export const envApi = {
   add: (data: EnvCreate) => fetchData<void>({ url: `${BASE}/add`, data }),
   /** 删除环境（级联清理关联规则和密码） */
   delete: (id: string) => fetchData<void>({ url: `${BASE}/delete`, data: { id } }),
-  /** 更新环境（含 devServerId 绑定变更） */
+  /** 更新环境（编辑表单，含 devServerId 字段） */
   update: (data: EnvUpdate) => fetchData<void>({ url: `${BASE}/update`, data }),
+  /** 切换环境绑定的 DevServer（代理目标），即时生效 */
+  switchProxy: (envId: string, devServerId: string) =>
+    fetchData<EnvModel>({ url: `${BASE}/proxy/switch`, data: { envId, devServerId } }),
   /** 启动代理服务器 */
   start: (id: string) => fetchData<void>({ url: `${BASE}/start`, data: { id } }),
   /** 停止代理服务器 */
