@@ -8,7 +8,7 @@ import { apiPrefix } from '@/utils'
 import { commonApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
-import { useWebSocket } from '@/composables/useWebSocket'
+import { useWebSocket } from '@vueuse/core'
 import DevServerTable from './DevServerTable.vue'
 import RequestLogTable from './RequestLogTable.vue'
 import ImportExportDialog from './ImportExportDialog.vue'
@@ -91,25 +91,26 @@ const clearProxyCookies = () => {
   })
 }
 // WebSocket：连接建立时刷新，实时接收 filechange / requestlog 推送
-useWebSocket({
-  url: `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/${apiPrefix}`,
-  onOpen: () => {
+useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/${apiPrefix}`, {
+  autoReconnect: { delay: 2000 },
+  onConnected: () => {
     console.log('WebSocket 连接已建立')
     refreshList()
   },
-  onMessage: (data) => {
+  onMessage: (_ws, event) => {
+    const data = JSON.parse(event.data)
     console.log('收到消息:', data)
     if (data.action === 'filechange') {
       refreshList()
     } else if (data.action === 'requestlog_history') {
       // 初始加载全量历史
-      requestLogs.value = (data.data as RequestLogEntry[]) || []
+      requestLogs.value = data.data || []
     } else if (data.action === 'requestlog') {
       // 增量追加新日志
       if (requestLogs.value.length >= MAX_LOG_ENTRIES) {
         requestLogs.value.shift()
       }
-      requestLogs.value.push(data.data as RequestLogEntry)
+      requestLogs.value.push(data.data)
     }
   },
 })
