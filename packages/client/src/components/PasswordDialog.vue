@@ -46,7 +46,7 @@ const loadPasswords = () => {
       tableData.value = data?.list ?? []
     })
     .catch(() => {
-      ElMessage.error('获取密码列表失败')
+      // 错误提示已由 fetchData 统一处理
     })
     .finally(() => {
       loading.value = false
@@ -87,9 +87,8 @@ const handleSetDefault = async (row: PasswordModel) => {
     await passwordApi.update({ id: row.id, isDefault: true })
     ElMessage.success('已设为默认密码')
     loadPasswords()
-  } catch (error) {
-    console.log('设置默认密码失败:', error)
-    ElMessage.error('设置默认密码失败')
+  } catch {
+    // 错误提示已由 fetchData 统一处理
   }
 }
 

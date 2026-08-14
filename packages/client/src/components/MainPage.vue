@@ -2,7 +2,7 @@
 import ApiServerEdit from './ApiServerEdit.vue'
 import DevServerEdit from './DevServerEdit.vue'
 import ApiServerTable from './ApiServerTable.vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, type TabsPaneContext } from 'element-plus'
 import { ref } from 'vue'
 import { apiPrefix } from '@/utils'
 import { commonApi } from '@/api'
@@ -72,12 +72,12 @@ const refreshList = () => {
 /**
  * 刷新指定表格
  */
-const refreshTable = (tab: { props: { name: string } }) => {
-  if (tab.props.name === 'api-server') {
+const refreshTable = (tab: TabsPaneContext) => {
+  if (tab.paneName === 'api-server') {
     refreshEnvList()
-  } else if (tab.props.name === 'dev-server') {
+  } else if (tab.paneName === 'dev-server') {
     refreshDevServerList()
-  } else if (tab.props.name === 'request-log') {
+  } else if (tab.paneName === 'request-log') {
     // 请求日志是实时推送的，无需刷新
   }
 }
@@ -121,7 +121,6 @@ useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hos
     :icon="Plus"
     plain
     @click="handleAddApiServer"
-    :loading="refreshLoading"
   >
     新增API Server
   </el-button>
@@ -130,7 +129,6 @@ useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hos
     :icon="Plus"
     plain
     @click="handleAddDevServer"
-    :loading="refreshLoading"
   >
     新增Dev Server
   </el-button>
@@ -148,7 +146,6 @@ useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hos
     :icon="Delete"
     plain
     @click="clearProxyCookies"
-    :loading="refreshLoading"
   >
     清除所有代理 Cookie
   </el-button>

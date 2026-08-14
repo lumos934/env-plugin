@@ -81,7 +81,7 @@ function getEnvList() {
       envOptions.value = (data?.list ?? []).filter((env) => !currentId || env.id !== currentId)
     })
     .catch(() => {
-      ElMessage.error('获取环境列表失败')
+      // 错误提示已由 fetchData 统一处理
     })
 }
 </script>

@@ -47,7 +47,7 @@ const loadRouteRules = () => {
       tableData.value = data?.list ?? []
     })
     .catch(() => {
-      ElMessage.error('获取路由规则列表失败')
+      // 错误提示已由 fetchData 统一处理
     })
     .finally(() => {
       loading.value = false

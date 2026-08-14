@@ -4,6 +4,9 @@ import type { FormInstance } from 'element-plus'
 /** useFormDialog 的模板 ref key 类型：每个弹窗实例使用不同的 key，支持同一组件内多实例并存 */
 type TemplateRefKey = 'formRef' | `formRef:${string}`
 
+/** 编辑数据：表单字段均可选（Partial）+ 编辑模式携带的 id */
+type FormEditData<T> = Partial<T> & { id?: string }
+
 interface UseFormDialogOptions<T extends Record<string, unknown>> {
   /** 表单模板 ref 名称，用于 useTemplateRef 关联。默认为 'formRef'；
    *  同一组件内有多个弹窗时必须传入不同 key（如 'formRef:env'、'formRef:server'） */
@@ -54,12 +57,12 @@ export function useFormDialog<T extends Record<string, unknown>>(
   }
 
   /** 深拷贝默认值填充（每次 reset 都是全新对象） */
-  function fillDefaults(merge?: unknown) {
-    Object.assign(formData, JSON.parse(JSON.stringify(options.defaultFormData)), (merge as Record<string, unknown>) ?? {})
+  function fillDefaults(merge?: Partial<T>) {
+    Object.assign(formData, JSON.parse(JSON.stringify(options.defaultFormData)), merge ?? {})
   }
 
   /** 重置表单状态 */
-  function resetData(merge?: unknown) {
+  function resetData(merge?: Partial<T>) {
     fillDefaults(merge)
     isEditMode.value = false
     currentId.value = ''
@@ -70,12 +73,12 @@ export function useFormDialog<T extends Record<string, unknown>>(
   /** 打开弹窗。
    *  - editData 有值且不传 isCopy → 编辑模式
    *  - 其它情况（含 isCopy=true）→ 新增/复制模式（isCopy 时 editData 会被带上） */
-  function showDialog(editData?: unknown, isCopy = false) {
+  function showDialog(editData?: FormEditData<T>, isCopy = false) {
     visible.value = true
 
     if (editData && !isCopy) {
       isEditMode.value = true
-      currentId.value = (editData as unknown as Record<string, string>).id ?? ''
+      currentId.value = editData.id ?? ''
       fillDefaults(editData)
     } else {
       resetData(editData)

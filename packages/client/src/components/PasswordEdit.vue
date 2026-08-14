@@ -39,7 +39,7 @@ const { visible, isEditMode, submitting, formData, showDialog: _showDialog, clos
 function showDialog(envId: string, passwordItem?: PasswordModel) {
   currentEnvId.value = envId
   if (passwordItem?.id) {
-    _showDialog(passwordItem as unknown as Record<string, unknown>)
+    _showDialog(passwordItem)
   } else {
     _showDialog()
     formData.envId = envId
@@ -95,6 +95,8 @@ const rules = reactive<Partial<Record<string, FormItemRule[]>>>({
       >
         <el-input
           v-model="formData.password"
+          type="password"
+          show-password
           placeholder="请输入密码"
         />
       </el-form-item>

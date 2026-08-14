@@ -7,7 +7,6 @@ type FetchDataInput =
   | {
       url: string
       method?: string
-      params?: object
       data?: object
     }
 const fetchData = <R = unknown>(input: FetchDataInput) => {
@@ -20,7 +19,7 @@ const fetchData = <R = unknown>(input: FetchDataInput) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: options.method !== 'GET' ? JSON.stringify(options.params || options.data) : undefined,
+    body: options.method !== 'GET' ? JSON.stringify(options.data) : undefined,
   })
     .then((res) => {
       // 第一步：先判断HTTP状态码是否成功（2xx）
