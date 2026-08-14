@@ -5,6 +5,7 @@ import type { EnvModel, EnvModelWithRouteCount } from '@envm/schemas'
 import { envApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
+import { useDragSort } from '@/composables/useDragSort'
 import ApiServerEdit from './ApiServerEdit.vue'
 import RouteRuleDialog from './RouteRuleDialog.vue'
 import PasswordDialog from './PasswordDialog.vue'
@@ -171,24 +172,12 @@ const handlePasswordDetail = (rowData: EnvModel) => {
   passwordDialogRef.value?.showDialog(rowData.id, rowData.name || rowData.apiBaseUrl)
 }
 
-// ====================== 拖拽排序开始 ======================
-const onEnd = () => {
-  saveSortOrder(tableData.value)
-}
-
-const saveSortOrder = (list: EnvModelWithRouteCount[]) => {
-  const orders = list.map((item, index) => ({
-    id: item.id,
-    sortOrder: index,
-  }))
-  envApi.sort(orders)
-    .then(() => ElMessage.success('排序保存成功'))
-    .catch(() => {
-      ElMessage.error('排序保存失败')
-      refreshEnvList()
-    })
-}
-// ====================== 拖拽排序结束 ======================
+// ====================== 拖拽排序 ======================
+const { onEnd } = useDragSort({
+  list: tableData,
+  sort: envApi.sort,
+  onRefresh: refreshEnvList,
+})
 </script>
 <template>
   <VueDraggable

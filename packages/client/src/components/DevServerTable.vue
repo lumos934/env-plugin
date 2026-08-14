@@ -7,6 +7,7 @@ import DevServerEdit from './DevServerEdit.vue'
 import { DocumentCopy, Edit, Delete } from '@element-plus/icons-vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useDevServerList } from '@/composables/useDevServerList'
+import { useDragSort } from '@/composables/useDragSort'
 
 const { list: devServerList, loading: devServerLoading, refresh } = useDevServerList()
 
@@ -32,26 +33,12 @@ const handleDelete = (rowData: DevServerModel) => {
     })
 }
 
-// ====================== 拖拽修复开始 ======================
-
-const onEnd = () => {
-  saveSortOrder(devServerList.value)
-}
-
-// 保存排序到后端
-const saveSortOrder = (list: DevServerModel[]) => {
-  const orders = list.map((item, index) => ({
-    id: item.id,
-    sortOrder: index,
-  }))
-  devServerApi.sort(orders)
-    .then(() => ElMessage.success('排序保存成功'))
-    .catch(() => {
-      ElMessage.error('排序保存失败')
-      refresh()
-    })
-}
-// ====================== 拖拽修复结束 ======================
+// ====================== 拖拽排序 ======================
+const { onEnd } = useDragSort({
+  list: devServerList,
+  sort: devServerApi.sort,
+  onRefresh: refresh,
+})
 
 const handleModify = (rowData: DevServerModel) => {
   devServerEditRef.value.showDialog(rowData)

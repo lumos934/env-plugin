@@ -3,11 +3,12 @@ import ApiServerEdit from './ApiServerEdit.vue'
 import DevServerEdit from './DevServerEdit.vue'
 import ApiServerTable from './ApiServerTable.vue'
 import { ElMessage } from 'element-plus'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { apiPrefix } from '@/utils'
 import { commonApi } from '@/api'
 import { useEnvList } from '@/composables/useEnvList'
 import { useDevServerList } from '@/composables/useDevServerList'
+import { useWebSocket } from '@/composables/useWebSocket'
 import DevServerTable from './DevServerTable.vue'
 import RequestLogTable from './RequestLogTable.vue'
 import ImportExportDialog from './ImportExportDialog.vue'
@@ -45,10 +46,6 @@ const handleAddDevServer = () => {
     devServerEditRef.value.showDialog()
   }
 }
-
-onMounted(() => {
-  startWs()
-})
 
 // 请求日志状态（客户端镜像 500 条上限）
 const requestLogs = ref<RequestLogEntry[]>([])
@@ -93,57 +90,29 @@ const clearProxyCookies = () => {
     ElMessage.success('操作成功')
   })
 }
-const reconnect = () => {
-  setTimeout(() => {
-    console.log(`尝试重新连接ing...`)
-    startWs()
-  }, 2000)
-}
-const startWs = () => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const host = window.location.host
-
-  // 构建 WebSocket 连接的 URL
-  const socketUrl = `${protocol}//${host}/${apiPrefix}`
-
-  const socket = new WebSocket(socketUrl)
-
-  // 连接建立时触发
-  socket.addEventListener('open', () => {
+// WebSocket：连接建立时刷新，实时接收 filechange / requestlog 推送
+useWebSocket({
+  url: `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/${apiPrefix}`,
+  onOpen: () => {
     console.log('WebSocket 连接已建立')
     refreshList()
-
-    // 当 WebSocket 连接关闭时，清除定时器
-    socket.addEventListener('close', () => {
-      console.log('WebSocket 连接已关闭')
-      reconnect()
-    })
-  })
-
-  // 接收到消息时触发
-  socket.addEventListener('message', (event) => {
-    console.log('收到消息:', event.data)
-    const data = JSON.parse(event.data)
+  },
+  onMessage: (data) => {
+    console.log('收到消息:', data)
     if (data.action === 'filechange') {
       refreshList()
     } else if (data.action === 'requestlog_history') {
       // 初始加载全量历史
-      requestLogs.value = data.data || []
+      requestLogs.value = (data.data as RequestLogEntry[]) || []
     } else if (data.action === 'requestlog') {
       // 增量追加新日志
       if (requestLogs.value.length >= MAX_LOG_ENTRIES) {
         requestLogs.value.shift()
       }
-      requestLogs.value.push(data.data)
+      requestLogs.value.push(data.data as RequestLogEntry)
     }
-  })
-
-  // 连接出错时触发
-  socket.addEventListener('error', () => {
-    // console.error('WebSocket 连接出错:', event)
-    reconnect()
-  })
-}
+  },
+})
 </script>
 <template>
   <el-button
