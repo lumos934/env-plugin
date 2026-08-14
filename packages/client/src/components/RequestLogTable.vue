@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import { VideoPause, VideoPlay, Delete } from '@element-plus/icons-vue'
 import type { RequestLogEntry } from '@envm/schemas'
+import type { TableInstance } from 'element-plus'
 
 const props = defineProps<{
   logs: RequestLogEntry[]
@@ -14,7 +15,7 @@ const emit = defineEmits<{
 const filterUrl = ref('')
 const filterStatusCode = ref<number | undefined>()
 const isPaused = ref(false)
-const tableRef = ref()
+const tableRef = ref<TableInstance>()
 
 const filteredLogs = computed(() => {
   let result = [...props.logs]
@@ -41,12 +42,8 @@ watch(
   () => {
     if (!isPaused.value) {
       nextTick(() => {
-        const tableBody = tableRef.value?.$el?.querySelector?.(
-          '.el-scrollbar__wrap'
-        ) as HTMLElement | null
-        if (tableBody) {
-          tableBody.scrollTop = tableBody.scrollHeight
-        }
+        // 使用 el-table 官方 API 滚动到底部，避免依赖内部 .el-scrollbar__wrap 结构
+        tableRef.value?.setScrollTop(Number.MAX_SAFE_INTEGER)
       })
     }
   }
