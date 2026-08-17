@@ -15,6 +15,7 @@ import { RouteRuleRepo } from "../repositories/RouteRuleRepo.js";
 import { EnvModel } from "../types/index.js";
 import { devServerLogger } from "../utils/logger.js";
 import { requestLogEmitter } from "./RequestLogService.js";
+import { classifyResourceType } from "../utils/resourceType.js";
 import { v4 as uuidv4 } from "uuid";
 
 class PreProxyServer {
@@ -170,6 +171,30 @@ class PreProxyServer {
   }
 
   /**
+   * 根据请求路径匹配路由规则，返回命中的 pathPrefix
+   * @param requestPath 请求路径
+   * @returns 命中的规则 pathPrefix，未命中返回 'default'
+   */
+  private getMatchedRule(requestPath: string): string {
+    const routeRules = this.routeRuleRepo.getByEnvId(this.envId);
+
+    // 过滤出已启用的规则
+    const enabledRules = routeRules.filter((rule) => rule.enabled !== false);
+
+    // 按 pathPrefix 长度降序排序，确保最长前缀匹配优先
+    const sortedRules = [...enabledRules].sort(
+      (a, b) => b.pathPrefix.length - a.pathPrefix.length
+    );
+
+    for (const rule of sortedRules) {
+      if (minimatch(requestPath, rule.pathPrefix, { dot: true })) {
+        return rule.pathPrefix;
+      }
+    }
+    return "default";
+  }
+
+  /**
    * 生成代理中间件
    * @returns
    */
@@ -219,20 +244,7 @@ class PreProxyServer {
             const envItem = this.getEnvItem();
 
             // 确定命中的路由规则
-            const routeRules = this.routeRuleRepo.getByEnvId(this.envId);
-            const enabledRules = routeRules.filter(
-              (rule) => rule.enabled !== false
-            );
-            const sortedRules = [...enabledRules].sort(
-              (a, b) => b.pathPrefix.length - a.pathPrefix.length
-            );
-            let matchedRule = "default";
-            for (const rule of sortedRules) {
-              if (minimatch(requestPath, rule.pathPrefix, { dot: true })) {
-                matchedRule = rule.pathPrefix;
-                break;
-              }
-            }
+            const matchedRule = this.getMatchedRule(requestPath);
 
             requestLogEmitter.emit("log", {
               id: (req as unknown as Record<string, unknown>).__logId as string || uuidv4(),
@@ -242,6 +254,11 @@ class PreProxyServer {
               statusCode: proxyRes.statusCode || 0,
               duration,
               matchedRule,
+              resourceType: classifyResourceType(
+                matchedRule,
+                proxyRes.headers["content-type"],
+                requestPath
+              ),
               envId: this.envId,
               envName: envItem?.name || envItem?.apiBaseUrl || "",
             });
@@ -255,6 +272,22 @@ class PreProxyServer {
           const customTarget = this.matchRouteRule(requestPath);
           const target = customTarget || `${this.getEnvItem()?.apiBaseUrl}`;
           proxyReq.setHeader("x-api-server", `${target}`);
+
+          // WebSocket 连接日志（无真实 HTTP 状态码，约定 101 Switching Protocols）
+          const matchedRule = this.getMatchedRule(requestPath);
+          const envItem = this.getEnvItem();
+          requestLogEmitter.emit("log", {
+            id: uuidv4(),
+            timestamp: Date.now(),
+            method: "WS",
+            url: requestPath,
+            statusCode: 101,
+            duration: 0,
+            matchedRule,
+            resourceType: "websocket",
+            envId: this.envId,
+            envName: envItem?.name || envItem?.apiBaseUrl || "",
+          });
         },
       },
     });

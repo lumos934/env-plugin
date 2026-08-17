@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick } from 'vue'
 import { VideoPause, VideoPlay, Delete } from '@element-plus/icons-vue'
-import type { RequestLogEntry } from '@envm/schemas'
+import type { RequestLogEntry, ResourceType } from '@envm/schemas'
 import type { TableInstance } from 'element-plus'
 
 const props = defineProps<{
@@ -14,11 +14,34 @@ const emit = defineEmits<{
 
 const filterUrl = ref('')
 const filterStatusCode = ref<number | undefined>()
+type ResourceTypeFilter = 'all' | ResourceType
+const filterResourceType = ref<ResourceTypeFilter>('all')
+
+const resourceTypeOptions: { label: string; value: ResourceTypeFilter }[] = [
+  { label: '全部', value: 'all' },
+  { label: 'Fetch/XHR', value: 'fetch' },
+  { label: '文档', value: 'document' },
+  { label: 'CSS', value: 'stylesheet' },
+  { label: 'JS', value: 'script' },
+  { label: '字体', value: 'font' },
+  { label: '图片', value: 'image' },
+  { label: '媒体', value: 'media' },
+  { label: '清单', value: 'manifest' },
+  { label: '套接字', value: 'websocket' },
+  { label: 'Wasm', value: 'wasm' },
+  { label: '其他', value: 'other' },
+]
 const isPaused = ref(false)
 const tableRef = ref<TableInstance>()
 
+// 暂停时的日志快照（冻结视图，避免继续累积新条目）
+const frozenLogs = ref<RequestLogEntry[]>([])
+
+// 暂停时显示快照，否则实时显示
+const displayedLogs = computed(() => (isPaused.value ? frozenLogs.value : props.logs))
+
 const filteredLogs = computed(() => {
-  let result = [...props.logs]
+  let result = [...displayedLogs.value]
   if (filterUrl.value) {
     const lower = filterUrl.value.toLowerCase()
     result = result.filter((e) => e.url.toLowerCase().includes(lower))
@@ -29,11 +52,24 @@ const filteredLogs = computed(() => {
   ) {
     result = result.filter((e) => e.statusCode === filterStatusCode.value)
   }
+  if (filterResourceType.value !== 'all') {
+    result = result.filter((e) => e.resourceType === filterResourceType.value)
+  }
   return result
 })
 
 const togglePause = () => {
-  isPaused.value = !isPaused.value
+  if (isPaused.value) {
+    // 继续：恢复实时显示，滚动到底部
+    isPaused.value = false
+    nextTick(() => {
+      tableRef.value?.setScrollTop(Number.MAX_SAFE_INTEGER)
+    })
+  } else {
+    // 暂停：快照当前日志，冻结显示
+    frozenLogs.value = [...props.logs]
+    isPaused.value = true
+  }
 }
 
 // 自动滚动到最新条目
@@ -77,6 +113,8 @@ const formatTime = (timestamp: number) => {
 }
 
 const handleClear = () => {
+  // 清空实时日志的同时也要清空暂停快照，否则暂停状态下清空无效
+  frozenLogs.value = []
   emit('clear')
 }
 </script>
@@ -91,6 +129,18 @@ const handleClear = () => {
         style="width: 240px"
         size="small"
       />
+      <el-select
+        v-model="filterResourceType"
+        size="small"
+        style="width: 120px"
+      >
+        <el-option
+          v-for="opt in resourceTypeOptions"
+          :key="opt.value"
+          :label="opt.label"
+          :value="opt.value"
+        />
+      </el-select>
       <el-input-number
         v-model="filterStatusCode"
         placeholder="状态码"
