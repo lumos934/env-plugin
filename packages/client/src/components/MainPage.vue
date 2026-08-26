@@ -12,6 +12,7 @@ import { useWebSocket } from '@vueuse/core'
 import DevServerTable from './DevServerTable.vue'
 import RequestLogTable from './RequestLogTable.vue'
 import ImportExportDialog from './ImportExportDialog.vue'
+import SystemSettings from './SystemSettings.vue'
 import type { RequestLogEntry } from '@envm/schemas'
 import { Plus, Refresh, Delete, Download, Upload } from '@element-plus/icons-vue'
 
@@ -199,6 +200,12 @@ useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hos
       name="request-log"
     >
       <request-log-table :logs="requestLogs" @clear="clearRequestLogs" />
+    </el-tab-pane>
+    <el-tab-pane
+      label="系统设置"
+      name="system-setting"
+    >
+      <system-settings></system-settings>
     </el-tab-pane>
   </el-tabs>
 

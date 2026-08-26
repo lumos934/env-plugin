@@ -9,6 +9,7 @@ import { RouteRuleController } from "../controllers/RouteRuleController.js";
 import { PasswordController } from "../controllers/PasswordController.js";
 import { RequestLogController } from "../controllers/RequestLogController.js";
 import { ImportExportController } from "../controllers/ImportExportController.js";
+import { SystemSettingController } from "../controllers/SystemSettingController.js";
 import { getConfig } from "../utils/ResolveConfig.js";
 import { toDTO } from "../middleware/dto.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -31,6 +32,7 @@ import {
   PasswordUpdateSchema,
   ExportRequestSchema,
   ImportRequestSchema,
+  SystemSettingUpdateSchema,
 } from "../types/index.js";
 
 // 辅助函数：绑定 Controller 方法，确保 this 指向正确
@@ -248,6 +250,24 @@ const createRequestLogRoutes = (controller: RequestLogController) => {
   return registerRoutes(router, routes);
 };
 
+const createSystemSettingRoutes = (controller: SystemSettingController) => {
+  const router = Router();
+  const routes: RouteDefinition[] = [
+    {
+      method: "get",
+      path: "/",
+      handler: bind(controller, "handleGet") as RouteDefinition["handler"],
+    },
+    {
+      method: "post",
+      path: "/",
+      middleware: [toDTO(SystemSettingUpdateSchema)],
+      handler: bind(controller, "handleUpdate") as RouteDefinition["handler"],
+    },
+  ];
+  return registerRoutes(router, routes);
+};
+
 const createCommonRoutes = () => {
   const router = Router();
   router.get("/are-you-ok", (req, res) => res.success({}, "I'm ok!"));
@@ -291,6 +311,9 @@ export const createRouter = (): Router => {
   const importExportController = container.get<ImportExportController>(
     "importExportController",
   );
+  const systemSettingController = container.get<SystemSettingController>(
+    "systemSettingController",
+  );
 
   // 挂载模块路由
   rootRouter.use("/env", createEnvRoutes(envController, importExportController));
@@ -298,6 +321,10 @@ export const createRouter = (): Router => {
   rootRouter.use("/route-rule", createRouteRuleRoutes(routeRuleController));
   rootRouter.use("/password", createPasswordRoutes(passwordController));
   rootRouter.use("/request-log", createRequestLogRoutes(requestLogController));
+  rootRouter.use(
+    "/system-setting",
+    createSystemSettingRoutes(systemSettingController),
+  );
   rootRouter.use("/", createCommonRoutes());
 
   return rootRouter;

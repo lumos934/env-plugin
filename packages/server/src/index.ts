@@ -5,6 +5,8 @@ import { getConfig, loadConfig } from "./utils/ResolveConfig.js";
 import { EnvmConfigInterface } from "./types/index.js";
 import { startDatabase } from "./repositories/database.js";
 import { initLoggers, logger } from "./utils/logger.js";
+import { Container } from "./Container.js";
+import { SystemSettingService } from "./service/SystemSettingService.js";
 
 class EnvManage {
   get config() {
@@ -33,6 +35,10 @@ class EnvManage {
       logger.info(`端口 ${this.config.port} 可用，启动服务...`);
 
       await startDatabase();
+      // 数据库就绪后，同步注入资源开关的持久化值到内存缓存
+      Container.getInstance()
+        .get<SystemSettingService>("systemSettingService")
+        .init();
       new PostProxyServer();
     } catch (error) {
       if (error instanceof Error) {

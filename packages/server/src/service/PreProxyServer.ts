@@ -16,6 +16,7 @@ import { RouteRuleRepo } from "../repositories/RouteRuleRepo.js";
 import { EnvModel } from "../types/index.js";
 import { devServerLogger } from "../utils/logger.js";
 import { requestLogEmitter } from "./RequestLogService.js";
+import { getInjectEnabled } from "./SystemSettingService.js";
 import { classifyResourceType } from "../utils/resourceType.js";
 import { v4 as uuidv4 } from "uuid";
 
@@ -368,7 +369,8 @@ class PreProxyServer {
         const body = Buffer.concat(chunks);
 
         // 只对 HTML 且配置了注入脚本目录
-        if (contentType.includes("text/html")) {
+        // 且注入资源功能开关开启时，才执行脚本注入
+        if (contentType.includes("text/html") && getInjectEnabled()) {
           const config = getConfig();
           const scriptDir = config.injectScriptDir;
 

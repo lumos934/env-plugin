@@ -14,6 +14,9 @@ import { RequestLogService } from "./service/RequestLogService.js";
 import { RequestLogController } from "./controllers/RequestLogController.js";
 import { ImportExportService } from "./service/ImportExportService.js";
 import { ImportExportController } from "./controllers/ImportExportController.js";
+import { SystemSettingRepo } from "./repositories/SystemSettingRepo.js";
+import { SystemSettingService } from "./service/SystemSettingService.js";
+import { SystemSettingController } from "./controllers/SystemSettingController.js";
 import { ProxyAutoStarter } from "./service/ProxyAutoStarterService.js";
 
 class Container {
@@ -71,6 +74,15 @@ class Container {
     this.register(
       "importExportController",
       new ImportExportController(this.get("importExportService")),
+    );
+    // 系统设置服务和控制器
+    const systemSettingService = new SystemSettingService(
+      new SystemSettingRepo()
+    );
+    this.register("systemSettingService", systemSettingService);
+    this.register(
+      "systemSettingController",
+      new SystemSettingController(systemSettingService),
     );
     setTimeout(() => {
       new ProxyAutoStarter(envRepo, this.get("envService"), routeRuleRepo);

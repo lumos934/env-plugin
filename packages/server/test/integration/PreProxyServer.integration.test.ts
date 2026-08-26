@@ -25,6 +25,18 @@ vi.mock('../../src/utils/ResolveConfig.js', () => ({
   loadConfig: () => mockConfig,
 }))
 
+// ---- Mock 注入资源开关（可控，避免触碰真实数据库）----
+// 集成测试未初始化数据库，getInjectEnabled 走模块级缓存，这里用 vi.hoisted
+// 提供可变状态，使测试可以开关注入行为而不触发 SystemSettingService 的 DB 访问。
+const { injectEnabledMock } = vi.hoisted(() => ({
+  injectEnabledMock: { value: true },
+}))
+
+vi.mock('../../src/service/SystemSettingService.js', () => ({
+  getInjectEnabled: () => injectEnabledMock.value,
+  SystemSettingService: class {},
+}))
+
 // ---- 常量 ----
 const TEST_ENV_ID = 'integration-test-env'
 const TARGET_ENV_ID = 'target-env-001'
@@ -283,6 +295,8 @@ describe('PreProxyServer Integration', () => {
   afterEach(async () => {
     await PreProxyServer.stopServer(TEST_ENV_ID)
     preProxy = null
+    // 复位注入开关，避免污染同文件其他注入断言
+    injectEnabledMock.value = true
   })
 
   // ================================================================
@@ -337,6 +351,22 @@ describe('PreProxyServer Integration', () => {
       expect(decoded).toContain('<div id="app">Hello Gzip</div>')
       // 且已注入内置的切换面板脚本
       expect(decoded).toContain('/envm-inject/envm-switcher.js')
+    })
+
+    it('关闭注入开关后不应注入脚本（gzip 原样透传）', async () => {
+      injectEnabledMock.value = false
+
+      const result = await httpGetBuffer(TEST_PORT, '/gzip-html')
+      expect(result.status).toBe(200)
+
+      // 响应仍为 gzip 编码
+      expect(result.headers['content-encoding']).toBe('gzip')
+      const decoded = zlib.gunzipSync(result.body).toString('utf8')
+
+      // 原始页面内容保留
+      expect(decoded).toContain('<div id="app">Hello Gzip</div>')
+      // 未注入内置切换面板脚本
+      expect(decoded).not.toContain('/envm-inject/envm-switcher.js')
     })
   })
 

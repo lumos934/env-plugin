@@ -34,6 +34,12 @@ export function createMemoryDb(): loki {
       indices: ['id', 'envId', 'isDefault'],
     })
   }
+  if (!db.getCollection('settings')) {
+    db.addCollection('settings', {
+      indices: ['id'],
+      unique: ['id'],
+    })
+  }
 
   return db
 }
