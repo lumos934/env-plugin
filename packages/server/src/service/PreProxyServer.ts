@@ -7,6 +7,7 @@ import * as libCookie from "cookie";
 import { minimatch } from "minimatch";
 import * as fs from "fs";
 import * as path from "path";
+import * as zlib from "zlib";
 
 import { getConfig } from "../utils/ResolveConfig.js";
 import { EnvRepo } from "../repositories/EnvRepo.js";
@@ -371,7 +372,25 @@ class PreProxyServer {
           const config = getConfig();
           const scriptDir = config.injectScriptDir;
 
-          let html = body.toString("utf8");
+          // 开发服务器（Vite/Webpack/Rspack 等）可能对响应开启 gzip/br 压缩，
+          // 此时 body 是压缩后的二进制数据：直接按 utf8 解码会得到乱码，
+          // 注入后返回的未压缩内容却仍带着 Content-Encoding 头，浏览器按
+          // 该编码解压就会报 ERR_CONTENT_DECODING_FAILED。
+          // 因此先解压再注入，最后按原编码重新压缩，保持响应头与响应体一致。
+          const contentEncoding = String(
+            proxyRes.headers["content-encoding"] || ""
+          ).toLowerCase();
+
+          let decodedBody = body;
+          if (contentEncoding === "gzip" || contentEncoding === "x-gzip") {
+            decodedBody = zlib.gunzipSync(body);
+          } else if (contentEncoding === "deflate") {
+            decodedBody = zlib.inflateSync(body);
+          } else if (contentEncoding === "br") {
+            decodedBody = zlib.brotliDecompressSync(body);
+          }
+
+          let html = decodedBody.toString("utf8");
 
           // 读取用户自定义文件夹下所有 js 文件（排除 # 开头的文件）
           const userScriptTags = scriptDir
@@ -390,7 +409,17 @@ class PreProxyServer {
             /<\/body>\s*<\/html>/gi,
             `${allScriptTags}</body></html>`
           );
-          const newBody = Buffer.from(html, "utf8");
+
+          let newBody = Buffer.from(html, "utf8");
+          // 若原响应为压缩内容，注入后按相同编码重新压缩
+          if (contentEncoding === "gzip" || contentEncoding === "x-gzip") {
+            newBody = zlib.gzipSync(newBody);
+          } else if (contentEncoding === "deflate") {
+            newBody = zlib.deflateSync(newBody);
+          } else if (contentEncoding === "br") {
+            newBody = zlib.brotliCompressSync(newBody);
+          }
+
           res.setHeader("Content-Length", newBody.length);
           res.end(newBody);
         } else {

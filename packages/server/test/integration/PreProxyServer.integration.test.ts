@@ -9,6 +9,7 @@ import {
 } from '../helpers/mockRepos.js'
 import { createEnvFixture, createDevServerFixture } from '../helpers/fixtures.js'
 import { createServer } from 'net'
+import * as zlib from 'zlib'
 import type { EnvModel } from '../../src/types/index.js'
 
 // ---- Mock Config ----
@@ -77,6 +78,37 @@ function httpGet(
   })
 }
 
+// ---- HTTP 请求辅助函数（返回原始 Buffer，用于压缩响应验证）----
+function httpGetBuffer(
+  port: number,
+  path: string,
+  headers?: Record<string, string>
+): Promise<{
+  status: number
+  headers: http.IncomingHttpHeaders
+  body: Buffer
+}> {
+  return new Promise((resolve, reject) => {
+    const url = `http://localhost:${port}${path}`
+    const req = http.get(url, { headers }, (res) => {
+      const chunks: Buffer[] = []
+      res.on('data', (chunk) => chunks.push(chunk))
+      res.on('end', () => {
+        resolve({
+          status: res.statusCode || 0,
+          headers: res.headers,
+          body: Buffer.concat(chunks),
+        })
+      })
+    })
+    req.on('error', reject)
+    req.setTimeout(10000, () => {
+      req.destroy()
+      reject(new Error(`Request timeout: ${url}`))
+    })
+  })
+}
+
 // ---- 主测试套件 ----
 describe('PreProxyServer Integration', () => {
   let mockDevServer: MockServer
@@ -110,6 +142,16 @@ describe('PreProxyServer Integration', () => {
       })
       app.get('/json', (_req, res) => {
         res.json({ type: 'json' })
+      })
+      // 模拟开启 gzip 压缩的开发服务器（Vite/Webpack/Rspack 等）
+      app.get('/gzip-html', (_req, res) => {
+        const html =
+          '<html><head></head><body><div id="app">Hello Gzip</div></body></html>'
+        const compressed = zlib.gzipSync(Buffer.from(html, 'utf8'))
+        res.setHeader('Content-Type', 'text/html')
+        res.setHeader('Content-Encoding', 'gzip')
+        res.setHeader('Content-Length', compressed.length)
+        res.end(compressed)
       })
     })
 
@@ -281,6 +323,20 @@ describe('PreProxyServer Integration', () => {
       expect(result.status).toBe(200)
       const data = JSON.parse(result.body)
       expect(data.type).toBe('json')
+    })
+
+    it('gzip 压缩的 HTML 响应应被正确解压并注入脚本', async () => {
+      const result = await httpGetBuffer(TEST_PORT, '/gzip-html')
+      expect(result.status).toBe(200)
+
+      // 响应仍为 gzip 编码，且响应体可被正常解压（不会 ERR_CONTENT_DECODING_FAILED）
+      expect(result.headers['content-encoding']).toBe('gzip')
+      const decoded = zlib.gunzipSync(result.body).toString('utf8')
+
+      // 解压后应包含原始页面内容
+      expect(decoded).toContain('<div id="app">Hello Gzip</div>')
+      // 且已注入内置的切换面板脚本
+      expect(decoded).toContain('/envm-inject/envm-switcher.js')
     })
   })
 
