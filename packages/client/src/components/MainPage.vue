@@ -21,6 +21,14 @@ const refreshLoading = ref(false)
 const importExportVisible = ref(false)
 const importExportMode = ref<'export' | 'import'>('export')
 
+// 导入/导出功能默认禁用，仅当 localStorage 中设置标志后才启用
+// 开启方式：localStorage.setItem('envm_import_export_enabled', '1') 后刷新页面
+const IMPORT_EXPORT_ENABLED_KEY = 'envm_import_export_enabled'
+const importExportEnabled = ref(
+  localStorage.getItem(IMPORT_EXPORT_ENABLED_KEY) === '1' ||
+    localStorage.getItem(IMPORT_EXPORT_ENABLED_KEY) === 'true'
+)
+
 const handleExport = () => {
   importExportMode.value = 'export'
   importExportVisible.value = true
@@ -150,6 +158,7 @@ useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hos
     清除所有代理 Cookie
   </el-button>
   <el-button
+    v-if="importExportEnabled"
     type="primary"
     :icon="Download"
     plain
@@ -158,6 +167,7 @@ useWebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hos
     导出配置
   </el-button>
   <el-button
+    v-if="importExportEnabled"
     type="primary"
     :icon="Upload"
     plain
