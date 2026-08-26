@@ -237,10 +237,7 @@ class EnvController {
 
       const updatedEnv = this.envService.handleSwitchProxy(envId, devServerId);
 
-      res.success({
-        message: "代理目标切换成功",
-        data: updatedEnv,
-      });
+      res.success(updatedEnv, "代理目标切换成功");
     } catch (error) {
       envLogger.error(error, "代理目标切换请求处理失败");
       next(error);
@@ -271,10 +268,7 @@ class EnvController {
         targetEnvId
       );
 
-      res.success({
-        message: "环境切换成功",
-        data: targetEnv,
-      });
+      res.success(targetEnv, "环境切换成功");
     } catch (error) {
       envLogger.error(error, "环境切换请求处理失败");
       next(error);

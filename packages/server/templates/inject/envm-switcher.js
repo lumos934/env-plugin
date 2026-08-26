@@ -15,6 +15,14 @@
 
 const API_PREFIX = "/dev-manage-api";
 
+// ==================== 悬浮球拖拽 / 贴边收起常量 ====================
+const BALL_SIZE = 48; // 悬浮球尺寸（与 CSS 保持一致）
+const EDGE_MARGIN = 24; // 默认距窗口边缘距离
+const DOCK_THRESHOLD = 40; // 距边缘小于该值（px）时吸附到边缘
+const HOVER_THRESHOLD = 48; // 收起后鼠标靠近提示线多少像素内触发展开
+const HOVER_PADDING = 12; // 判断鼠标是否已离开悬浮球的余量
+const POSITION_KEY = "envm-switcher-position"; // localStorage 存储键
+
 // ==================== 工具函数 ====================
 
 /**
@@ -54,6 +62,13 @@ class EnvmSwitcher {
     this.isSwitching = false;
     this.pollTimer = null;
 
+    // 悬浮球位置与收起状态
+    this.pos = { left: 0, top: 0 };
+    this.dockedEdge = null; // null | 'left' | 'right' | 'top' | 'bottom'
+    this.isCollapsed = false;
+    this.dragState = null;
+    this.dragMoved = false;
+
     // 创建 Shadow DOM 容器
     this.host = document.createElement("div");
     this.host.id = "__envm_switcher_host";
@@ -66,6 +81,10 @@ class EnvmSwitcher {
 
     // 创建 UI 结构
     this._render();
+
+    // 恢复并应用悬浮球位置（在挂载前设置，避免闪烁）
+    this._restorePosition();
+
     document.body.appendChild(this.host);
 
     // 初始化
@@ -99,8 +118,8 @@ class EnvmSwitcher {
 
         all: initial;
         position: fixed;
-        bottom: 24px;
-        right: 24px;
+        top: 0;
+        left: 0;
         z-index: 99999;
         font-family: var(--envm-font);
         font-size: var(--envm-font-size);
@@ -137,12 +156,13 @@ class EnvmSwitcher {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
         box-shadow: 0 4px 20px rgba(102, 126, 234, 0.35);
-        cursor: pointer;
+        cursor: grab;
+        touch-action: none;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
-        transition: transform var(--envm-transition), box-shadow var(--envm-transition);
+        transition: transform var(--envm-transition), box-shadow var(--envm-transition), opacity var(--envm-transition);
         user-select: none;
         position: relative;
         overflow: visible;
@@ -180,6 +200,13 @@ class EnvmSwitcher {
 
       .ball:active {
         transform: scale(0.94);
+        cursor: grabbing;
+      }
+
+      .ball.collapsed {
+        transform: scale(0.3);
+        opacity: 0;
+        pointer-events: none;
       }
 
       .ball-label {
@@ -228,6 +255,21 @@ class EnvmSwitcher {
         50% { transform: scale(1.1); opacity: 0.5; }
       }
 
+      /* ========== 边缘收起提示线 ========== */
+      .edge-hint {
+        position: absolute;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 2px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--envm-transition);
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.6);
+      }
+
+      .edge-hint.visible {
+        opacity: 1;
+      }
+
       /* ========== 面板 ========== */
       .panel {
         position: absolute;
@@ -243,6 +285,27 @@ class EnvmSwitcher {
         overflow: hidden;
         transition: opacity var(--envm-transition), transform var(--envm-transition);
         border: 1px solid var(--envm-border);
+      }
+
+      /* 面板开口方向：根据悬浮球在视口中的位置动态调整，避免超出视口 */
+      :host([data-panel-v="down"]) .panel {
+        top: 60px;
+        bottom: auto;
+      }
+
+      :host([data-panel-v="up"]) .panel {
+        bottom: 60px;
+        top: auto;
+      }
+
+      :host([data-panel-h="left"]) .panel {
+        left: 0;
+        right: auto;
+      }
+
+      :host([data-panel-h="right"]) .panel {
+        right: 0;
+        left: auto;
       }
 
       .panel.hidden {
@@ -513,6 +576,27 @@ class EnvmSwitcher {
         max-width: 280px;
       }
 
+      /* 提示条跟随悬浮球方向对齐，避免贴顶 / 贴左时超出视口 */
+      :host([data-panel-v="down"]) .toast {
+        top: 64px;
+        bottom: auto;
+      }
+
+      :host([data-panel-v="up"]) .toast {
+        bottom: 64px;
+        top: auto;
+      }
+
+      :host([data-panel-h="left"]) .toast {
+        left: 0;
+        right: auto;
+      }
+
+      :host([data-panel-h="right"]) .toast {
+        right: 0;
+        left: auto;
+      }
+
       @keyframes slideIn {
         from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
@@ -528,6 +612,7 @@ class EnvmSwitcher {
         <span id="ballLabel" class="ball-label">...</span>
         <span id="ballDot" class="ball-dot stopped"></span>
       </div>
+      <div id="edgeHint" class="edge-hint"></div>
       <div id="panel" class="panel hidden">
         <div class="panel-header">
           <span class="panel-title">环境切换</span>
@@ -574,7 +659,11 @@ class EnvmSwitcher {
 
   async _init() {
     // 绑定事件
-    this._$("ball").addEventListener("click", () => this._togglePanel());
+    this._$("ball").addEventListener("click", () => {
+      // 拖拽移动后不触发点击展开面板
+      if (this.dragMoved) return;
+      this._togglePanel();
+    });
     this._$("closeBtn").addEventListener("click", (e) => {
       e.stopPropagation();
       this._closePanel();
@@ -602,12 +691,340 @@ class EnvmSwitcher {
       }
     });
 
+    // 悬浮球拖拽
+    this._initDrag();
+
+    // 窗口尺寸变化时重新校正位置
+    window.addEventListener("resize", () => this._onResize());
+
+    // 全局鼠标移动：驱动边缘收起 / 展开
+    document.addEventListener("mousemove", (e) => this._onGlobalMouseMove(e));
+
+    // 初始化面板开口方向
+    this._updatePanelOrientation();
+
+    // 初始加载时若悬浮球贴边，默认收起（否则需等首次 mousemove 才收起）
+    this._collapse();
+
     // 加载数据
     await Promise.all([this._fetchCurrentEnv(), this._fetchEnvList()]);
     this._updateUI();
 
     // 开始定时轮询（每 5 秒刷新环境列表）
     this._startPolling();
+  }
+
+  // ==================== 悬浮球拖拽与边缘收起 ====================
+
+  /**
+   * 视口内容区宽度（不含滚动条，避免贴边元素遮罩滚动条）
+   */
+  _viewportWidth() {
+    return document.documentElement.clientWidth || window.innerWidth;
+  }
+
+  /**
+   * 视口内容区高度（不含滚动条）
+   */
+  _viewportHeight() {
+    return document.documentElement.clientHeight || window.innerHeight;
+  }
+
+  /**
+   * 恢复上次保存的悬浮球位置（localStorage），并检测是否贴边
+   */
+  _restorePosition() {
+    const w = this._viewportWidth();
+    const h = this._viewportHeight();
+
+    // 默认：右下角
+    this.pos.left = w - BALL_SIZE - EDGE_MARGIN;
+    this.pos.top = h - BALL_SIZE - EDGE_MARGIN;
+
+    try {
+      const raw = window.localStorage.getItem(POSITION_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (
+          saved &&
+          typeof saved.left === "number" &&
+          typeof saved.top === "number"
+        ) {
+          this.pos.left = saved.left;
+          this.pos.top = saved.top;
+        }
+      }
+    } catch {
+      // localStorage 不可用或数据损坏时使用默认位置
+    }
+
+    this._clampPosition();
+    this.dockedEdge = this._detectEdge();
+    if (this.dockedEdge) {
+      this._snapToEdge(this.dockedEdge);
+    }
+    this._applyPosition();
+  }
+
+  /**
+   * 将位置限制在视口内
+   */
+  _clampPosition() {
+    const w = this._viewportWidth();
+    const h = this._viewportHeight();
+    this.pos.left = Math.min(Math.max(0, this.pos.left), w - BALL_SIZE);
+    this.pos.top = Math.min(Math.max(0, this.pos.top), h - BALL_SIZE);
+  }
+
+  /**
+   * 应用位置到宿主元素
+   */
+  _applyPosition() {
+    this.host.style.left = `${this.pos.left}px`;
+    this.host.style.top = `${this.pos.top}px`;
+  }
+
+  /**
+   * 保存位置到 localStorage
+   */
+  _savePosition() {
+    try {
+      window.localStorage.setItem(
+        POSITION_KEY,
+        JSON.stringify({ left: this.pos.left, top: this.pos.top })
+      );
+    } catch {
+      // 忽略存储失败
+    }
+  }
+
+  /**
+   * 检测悬浮球是否贴边，返回最近的边缘，否则返回 null
+   */
+  _detectEdge() {
+    const w = this._viewportWidth();
+    const h = this._viewportHeight();
+    const distLeft = this.pos.left;
+    const distRight = w - (this.pos.left + BALL_SIZE);
+    const distTop = this.pos.top;
+    const distBottom = h - (this.pos.top + BALL_SIZE);
+    const min = Math.min(distLeft, distRight, distTop, distBottom);
+
+    if (min > DOCK_THRESHOLD) return null;
+    if (min === distLeft) return "left";
+    if (min === distRight) return "right";
+    if (min === distTop) return "top";
+    return "bottom";
+  }
+
+  /**
+   * 将悬浮球吸附到指定边缘（与边缘齐平）
+   */
+  _snapToEdge(edge) {
+    const w = this._viewportWidth();
+    const h = this._viewportHeight();
+    if (edge === "left") this.pos.left = 0;
+    else if (edge === "right") this.pos.left = w - BALL_SIZE;
+    else if (edge === "top") this.pos.top = 0;
+    else if (edge === "bottom") this.pos.top = h - BALL_SIZE;
+    this._applyPosition();
+  }
+
+  /**
+   * 更新面板开口方向（上/下、左/右），保证面板不超出视口
+   */
+  _updatePanelOrientation() {
+    const cx = this.pos.left + BALL_SIZE / 2;
+    const cy = this.pos.top + BALL_SIZE / 2;
+    this.host.dataset.panelV = cy > this._viewportHeight() / 2 ? "up" : "down";
+    this.host.dataset.panelH = cx > this._viewportWidth() / 2 ? "right" : "left";
+  }
+
+  // ==================== 拖拽 ====================
+
+  _initDrag() {
+    const ball = this._$("ball");
+    ball.addEventListener("pointerdown", (e) => this._onDragStart(e));
+    ball.addEventListener("pointermove", (e) => this._onDragMove(e));
+    ball.addEventListener("pointerup", (e) => this._onDragEnd(e));
+    ball.addEventListener("pointercancel", (e) => this._onDragEnd(e));
+  }
+
+  _onDragStart(e) {
+    // 仅响应主键（鼠标左键 / 触摸）
+    if (e.button !== undefined && e.button !== 0) return;
+
+    // 收起状态下被拖拽，先展开
+    if (this.isCollapsed) this._expand();
+
+    this.dragState = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origLeft: this.pos.left,
+      origTop: this.pos.top,
+      moved: false,
+    };
+    this.dragMoved = false;
+
+    try {
+      this._$("ball").setPointerCapture(e.pointerId);
+    } catch {
+      // 某些环境下 setPointerCapture 可能不可用
+    }
+  }
+
+  _onDragMove(e) {
+    if (!this.dragState) return;
+
+    const dx = e.clientX - this.dragState.startX;
+    const dy = e.clientY - this.dragState.startY;
+
+    // 小于阈值视为点击，不触发拖拽
+    if (!this.dragState.moved && Math.hypot(dx, dy) < 4) return;
+
+    this.dragState.moved = true;
+    this.dragMoved = true;
+
+    this.pos.left = this.dragState.origLeft + dx;
+    this.pos.top = this.dragState.origTop + dy;
+    this._applyPosition();
+  }
+
+  _onDragEnd() {
+    if (!this.dragState) return;
+    const wasMoved = this.dragState.moved;
+    this.dragState = null;
+
+    if (wasMoved) {
+      this._clampPosition();
+      this.dockedEdge = this._detectEdge();
+      if (this.dockedEdge) {
+        this._snapToEdge(this.dockedEdge);
+      }
+      this._applyPosition();
+      this._savePosition();
+      this._updatePanelOrientation();
+    }
+
+    // 延迟清除拖拽标记，确保随后的 click 事件能读取到
+    setTimeout(() => {
+      this.dragMoved = false;
+    }, 0);
+  }
+
+  // ==================== 边缘收起 / 展开 ====================
+
+  _collapse() {
+    if (this.isCollapsed || !this.dockedEdge) return;
+    if (this.isPanelOpen) this._closePanel();
+    this.isCollapsed = true;
+    this._$("ball").classList.add("collapsed");
+    this._updateEdgeHint();
+    this._$("edgeHint").classList.add("visible");
+    // 收起后释放宿主指针事件，避免遮挡页面内容
+    this.host.style.pointerEvents = "none";
+  }
+
+  _expand() {
+    if (!this.isCollapsed) return;
+    this.isCollapsed = false;
+    this._$("ball").classList.remove("collapsed");
+    this._$("edgeHint").classList.remove("visible");
+    this.host.style.pointerEvents = "";
+  }
+
+  /**
+   * 更新边缘提示线的位置与朝向
+   */
+  _updateEdgeHint() {
+    if (!this.dockedEdge) return;
+    const hint = this._$("edgeHint");
+    if (!hint) return;
+
+    const THICK = 4; // 提示线粗细
+    const LEN = 40; // 提示线长度
+    const cx = BALL_SIZE / 2; // 悬浮球中心（相对宿主）
+    const cy = BALL_SIZE / 2;
+
+    hint.style.top = "";
+    hint.style.right = "";
+    hint.style.bottom = "";
+    hint.style.left = "";
+
+    if (this.dockedEdge === "left" || this.dockedEdge === "right") {
+      hint.style.width = `${THICK}px`;
+      hint.style.height = `${LEN}px`;
+      hint.style.top = `${cy - LEN / 2}px`;
+      if (this.dockedEdge === "left") hint.style.left = "0";
+      else hint.style.right = "0";
+    } else {
+      hint.style.width = `${LEN}px`;
+      hint.style.height = `${THICK}px`;
+      hint.style.left = `${cx - LEN / 2}px`;
+      if (this.dockedEdge === "top") hint.style.top = "0";
+      else hint.style.bottom = "0";
+    }
+  }
+
+  /**
+   * 判断坐标是否靠近提示线（用于收起后触发展开）
+   */
+  _isNearHint(x, y) {
+    const cx = this.pos.left + BALL_SIZE / 2;
+    const cy = this.pos.top + BALL_SIZE / 2;
+    const HALF = 20; // 提示线半长
+    const PAD = 16;
+
+    switch (this.dockedEdge) {
+      case "left":
+        return x < HOVER_THRESHOLD && Math.abs(y - cy) < HALF + PAD;
+      case "right":
+        return (
+          x > this._viewportWidth() - HOVER_THRESHOLD && Math.abs(y - cy) < HALF + PAD
+        );
+      case "top":
+        return y < HOVER_THRESHOLD && Math.abs(x - cx) < HALF + PAD;
+      case "bottom":
+        return (
+          y > this._viewportHeight() - HOVER_THRESHOLD && Math.abs(x - cx) < HALF + PAD
+        );
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * 判断坐标是否仍悬浮在球附近
+   */
+  _isNearBall(x, y) {
+    const cx = this.pos.left + BALL_SIZE / 2;
+    const cy = this.pos.top + BALL_SIZE / 2;
+    const r = BALL_SIZE / 2 + HOVER_PADDING;
+    return Math.hypot(x - cx, y - cy) < r;
+  }
+
+  _onGlobalMouseMove(e) {
+    if (!this.dockedEdge || this.dragState) return;
+
+    if (this.isCollapsed) {
+      if (this._isNearHint(e.clientX, e.clientY)) this._expand();
+    } else if (!this.isPanelOpen && !this._isNearBall(e.clientX, e.clientY)) {
+      this._collapse();
+    }
+  }
+
+  _onResize() {
+    this._clampPosition();
+    this.dockedEdge = this._detectEdge();
+    if (this.dockedEdge) {
+      this._snapToEdge(this.dockedEdge);
+      this._updateEdgeHint();
+    } else {
+      if (this.isCollapsed) this._expand();
+      this._applyPosition();
+    }
+    this._updatePanelOrientation();
   }
 
   // ==================== API 调用 ====================
@@ -637,20 +1054,6 @@ class EnvmSwitcher {
     } catch {
       // 保持上一次的列表
     }
-  }
-
-  async _startEnv(id) {
-    await apiFetch(`${API_PREFIX}/env/start`, {
-      method: "POST",
-      body: JSON.stringify({ id }),
-    });
-  }
-
-  async _stopEnv(id) {
-    await apiFetch(`${API_PREFIX}/env/stop`, {
-      method: "POST",
-      body: JSON.stringify({ id }),
-    });
   }
 
   async _switchEnv(currentEnvId, targetEnvId) {
@@ -703,6 +1106,9 @@ class EnvmSwitcher {
 
     ball.classList.add(statusClass);
     dot.classList.add(statusClass);
+
+    // className 重置会覆盖 collapsed，若处于收起状态则恢复
+    if (this.isCollapsed) ball.classList.add("collapsed");
   }
 
   _updatePanel() {
@@ -791,12 +1197,9 @@ class EnvmSwitcher {
     const isSwitching = this.isSwitching;
 
     let actionBtn = "";
-    if (isCurrent && isRunning) {
-      actionBtn = `<button class="item-action stop" data-env-id="${env.id}" ${isSwitching ? "disabled" : ""}>停止</button>`;
-    } else if (isRunning) {
+    // 当前页面正在访问的环境不显示操作按钮，其它环境统一展示「切换」
+    if (!isCurrent) {
       actionBtn = `<button class="item-action" data-env-id="${env.id}" ${isSwitching ? "disabled" : ""}>切换</button>`;
-    } else {
-      actionBtn = `<button class="item-action" data-env-id="${env.id}" ${isSwitching ? "disabled" : ""}>启动</button>`;
     }
 
     // 当前运行中的环境：渲染 DevServer 代理目标子列表
@@ -889,55 +1292,10 @@ class EnvmSwitcher {
   async _handleEnvAction(env) {
     if (this.isSwitching) return;
 
-    const currentEnv = this.envList.find((e) => e.id === this.currentEnvId);
-    const isCurrentRunning =
-      currentEnv && currentEnv.status === "running" && this.currentEnvId === env.id;
-    const isSelf = this.currentEnvId === env.id;
+    // 当前页面正在访问的环境不允许操作，忽略点击；其他环境统一走 switch
+    if (this.currentEnvId === env.id) return;
 
-    // 如果是当前运行中的环境 → 停止
-    if (isCurrentRunning) {
-      await this._doStop(env);
-      return;
-    }
-
-    // 当前已停止的环境 → 启动（不跳转，因为当前页面就属于它）
-    if (isSelf && env.status === "stopped") {
-      await this._doStart(env);
-      return;
-    }
-
-    // 切换/启动其他环境 → 统一走 switch 端点，服务端保证目标就绪后返回
     await this._doSwitch(env);
-  }
-
-  async _doStop(env) {
-    this.isSwitching = true;
-    this._updateUI();
-
-    try {
-      await this._stopEnv(env.id);
-      await this._refresh();
-    } catch (err) {
-      this._showToast(`停止失败: ${err.message}`);
-    } finally {
-      this.isSwitching = false;
-      this._updateUI();
-    }
-  }
-
-  async _doStart(env) {
-    this.isSwitching = true;
-    this._updateUI();
-
-    try {
-      await this._startEnv(env.id);
-      await this._refresh();
-    } catch (err) {
-      this._showToast(`启动失败: ${err.message}`);
-    } finally {
-      this.isSwitching = false;
-      this._updateUI();
-    }
   }
 
   async _doSwitch(targetEnv) {
