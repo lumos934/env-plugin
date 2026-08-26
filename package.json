@@ -1,6 +1,6 @@
 {
   "name": "env-plugin-root",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "A dev env plugin that integrates an Express server with request proxying capabilities.",
   "keywords": [
