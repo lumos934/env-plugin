@@ -15,7 +15,10 @@ class SystemSettingController {
    */
   handleGet(req: Request, res: Response, next: NextFunction): void {
     try {
-      res.success({ injectEnabled: this.service.getInjectEnabled() });
+      res.success({
+        injectEnabled: this.service.getInjectEnabled(),
+        logEnabled: this.service.getLogEnabled(),
+      });
     } catch (error) {
       next(error);
     }
@@ -27,9 +30,13 @@ class SystemSettingController {
    */
   handleUpdate(req: Request, res: Response, next: NextFunction): void {
     try {
-      const { injectEnabled } = req.dto as SystemSettingUpdate;
+      const { injectEnabled, logEnabled } = req.dto as SystemSettingUpdate;
       this.service.setInjectEnabled(injectEnabled);
-      res.success({ injectEnabled: this.service.getInjectEnabled() });
+      this.service.setLogEnabled(logEnabled);
+      res.success({
+        injectEnabled: this.service.getInjectEnabled(),
+        logEnabled: this.service.getLogEnabled(),
+      });
     } catch (error) {
       next(error);
     }

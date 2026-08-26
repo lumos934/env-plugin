@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import type { RequestLogEntry } from "../types/shared/RequestLog.js";
 import { proxyLogger } from "../utils/logger.js";
+import { getLogEnabled } from "./SystemSettingService.js";
 
 const MAX_LOG_ENTRIES = 500;
 
@@ -27,6 +28,11 @@ class RequestLogService {
    * 添加日志条目（环形缓冲区，最多保留 MAX_LOG_ENTRIES 条）
    */
   private addLog(entry: RequestLogEntry): void {
+    // 请求日志记录开关关闭（默认暂停）时不记录、不推送
+    if (!getLogEnabled()) {
+      return;
+    }
+
     if (this.logs.length >= MAX_LOG_ENTRIES) {
       this.logs.shift();
     }

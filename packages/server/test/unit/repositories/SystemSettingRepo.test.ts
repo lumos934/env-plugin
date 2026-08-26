@@ -21,22 +21,34 @@ describe('SystemSettingRepo', () => {
     })
 
     it('upsert 后应返回该记录', () => {
-      repo.upsert({ id: 'global', injectEnabled: false })
-      expect(repo.getGlobal()).toMatchObject({ id: 'global', injectEnabled: false })
+      repo.upsert({ id: 'global', injectEnabled: false, logEnabled: false })
+      expect(repo.getGlobal()).toMatchObject({
+        id: 'global',
+        injectEnabled: false,
+        logEnabled: false,
+      })
     })
   })
 
   describe('upsert', () => {
     it('不存在时应插入新记录', () => {
-      repo.upsert({ id: 'global', injectEnabled: true })
-      expect(repo.getGlobal()).toMatchObject({ id: 'global', injectEnabled: true })
+      repo.upsert({ id: 'global', injectEnabled: true, logEnabled: true })
+      expect(repo.getGlobal()).toMatchObject({
+        id: 'global',
+        injectEnabled: true,
+        logEnabled: true,
+      })
     })
 
     it('已存在时应更新原记录（不产生重复）', () => {
-      repo.upsert({ id: 'global', injectEnabled: true })
-      repo.upsert({ id: 'global', injectEnabled: false })
+      repo.upsert({ id: 'global', injectEnabled: true, logEnabled: true })
+      repo.upsert({ id: 'global', injectEnabled: false, logEnabled: false })
 
-      expect(repo.getGlobal()).toMatchObject({ id: 'global', injectEnabled: false })
+      expect(repo.getGlobal()).toMatchObject({
+        id: 'global',
+        injectEnabled: false,
+        logEnabled: false,
+      })
       // 集合中应只有一条记录
       const collection = getCurrentDb().getCollection('settings')
       expect(collection.find({ id: 'global' })).toHaveLength(1)

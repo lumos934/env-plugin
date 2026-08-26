@@ -35,7 +35,7 @@ class EnvManage {
       logger.info(`端口 ${this.config.port} 可用，启动服务...`);
 
       await startDatabase();
-      // 数据库就绪后，同步注入资源开关的持久化值到内存缓存
+      // 数据库就绪后，同步系统设置（注入开关、请求日志记录开关）的持久化值到内存缓存
       Container.getInstance()
         .get<SystemSettingService>("systemSettingService")
         .init();
